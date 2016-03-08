@@ -27,7 +27,7 @@ void test_value_ctor()
     static_assert (sizeof(opt_int) == sizeof(int), "size waste");
     
     opt_int oi_, oiN1(-1), oi0(0), oi1(1);
-    assert (!!!!oi_.has_value());
+    assert (!oi_.has_value());
     assert (!oiN1.has_value());
     assert ( oi0.has_value());
     assert ( oi1.has_value());
