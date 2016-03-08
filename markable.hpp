@@ -361,7 +361,6 @@ class compact_optional : public detail_::compact_optional_base<N>
   typedef detail_::compact_optional_base<N> super;
   
 public:
-
   typedef typename N::value_type value_type;
   typedef typename N::storage_type storage_type;
   typedef typename N::reference_type reference_type;
