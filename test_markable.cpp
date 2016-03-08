@@ -23,7 +23,7 @@ void ignore(T&&) {}
 void test_value_ctor()
 {
   {
-    typedef markable< evp_int<int, -1> > opt_int;
+    typedef markable< mark_int<int, -1> > opt_int;
     static_assert (sizeof(opt_int) == sizeof(int), "size waste");
     
     opt_int oi_, oiN1(-1), oi0(0), oi1(1);
@@ -36,7 +36,7 @@ void test_value_ctor()
     assert (oi1.value() == 1);
   }
   {
-    typedef markable< evp_int<int, 0> > opt_int;
+    typedef markable< mark_int<int, 0> > opt_int;
     static_assert (sizeof(opt_int) == sizeof(int), "size waste");
     opt_int oi_, oiN1(-1), oi0(0), oi1(1);
     assert (!oi_.has_value());
@@ -99,7 +99,7 @@ void test_custom_storage()
 
 void test_bool_storage()
 {
-  typedef markable<evp_bool> opt_bool;
+  typedef markable<mark_bool> opt_bool;
   static_assert (sizeof(opt_bool) == 1, "size waste");
   
   opt_bool ob_, obT(true), obF(false);
@@ -114,7 +114,7 @@ void test_bool_storage()
 
 void test_unsafe_raw_value()
 {
-  typedef markable< evp_int<int, -1> > opt_int;
+  typedef markable< mark_int<int, -1> > opt_int;
   opt_int oi_, oiN1(-1), oi0(0), oi1(1);
   
   assert ( oi_.unsafe_raw_value() == -1);
@@ -123,9 +123,9 @@ void test_unsafe_raw_value()
   assert ( oi1.unsafe_raw_value() ==  1);
 }
 
-void test_evp_fp_nan()
+void test_mark_fp_nan()
 {
-  typedef markable<evp_fp_nan<double>> opt_double;
+  typedef markable<mark_fp_nan<double>> opt_double;
   opt_double o_, o1 (1.0), oNan (0.0/0.0);
   assert (!o_.has_value());
   assert ( o1.has_value());
@@ -144,10 +144,10 @@ void test_evp_fp_nan()
   assert (v != v);
 }
 
-void test_evp_value_init()
+void test_mark_value_init()
 {
   {
-    typedef markable<evp_value_init<int>> opt_t;
+    typedef markable<mark_value_init<int>> opt_t;
     opt_t o_, o1 (1), oE(0);
     
     assert (!o_.has_value());
@@ -161,7 +161,7 @@ void test_evp_value_init()
     assert (oE.unsafe_raw_value() == 0);
   }
   {
-    typedef markable<evp_value_init<std::string>> opt_t;
+    typedef markable<mark_value_init<std::string>> opt_t;
     opt_t o_, o1 (std::string("one")), oE ((std::string()));
     
     assert (!o_.has_value());
@@ -195,11 +195,11 @@ struct Cont
   bool operator==(const Cont& rhs) const { return empty_ == rhs.empty_; }
 };
 
-void test_evp_stl_empty()
+void test_mark_stl_empty()
 {
   reset_globals();
   {
-    typedef markable<evp_stl_empty<Cont>> opt_t;
+    typedef markable<mark_stl_empty<Cont>> opt_t;
     opt_t o_, o1 (Cont(false)), oE(Cont(true));
     
     assert (objects_created_with_value == 3);
@@ -213,7 +213,7 @@ void test_evp_stl_empty()
     assert (oE.unsafe_raw_value() == Cont(true));
   }
   {
-    typedef markable<evp_stl_empty<std::string>> opt_t;
+    typedef markable<mark_stl_empty<std::string>> opt_t;
     opt_t o_, o1 (std::string("one")), oE ((std::string()));
     
     assert (!o_.has_value());
@@ -268,17 +268,17 @@ public:
   }
 };
 
-struct evp_minutes : markable_pod_storage_type<minutes_since_midnight, int>
+struct mark_minutes : markable_pod_storage_type<minutes_since_midnight, int>
 {
   static storage_type empty_value() { return -1; }
   static bool is_empty_value(const storage_type& v) { return v == -1; }
 };
 
-void test_evp_raw_storage()
+void test_mark_raw_storage()
 {
   reset_globals();
   {
-    typedef markable<evp_minutes> opt_time;
+    typedef markable<mark_minutes> opt_time;
     const minutes_since_midnight t0(0), tM(1439);
     opt_time ot_, ot0 (t0), otM(tM);
     assert (!ot_.has_value());
@@ -318,9 +318,9 @@ void test_evp_raw_storage()
 
 enum class Dir { N, E, S, W };
 
-void test_evp_enum()
+void test_mark_enum()
 {
-  typedef markable<evp_enum<Dir, -1>> opt_dir;
+  typedef markable<mark_enum<Dir, -1>> opt_dir;
   opt_dir o_, oN(Dir::N), oW(Dir::W);
   
   assert (!o_.has_value());
@@ -338,7 +338,7 @@ void test_evp_enum()
 #if defined AK_TOOLBOX_USING_BOOST
 void test_optional_as_storage()
 {
-  typedef markable<evp_optional<boost::optional<int>>> opt_int;
+  typedef markable<mark_optional<boost::optional<int>>> opt_int;
   opt_int oi_, oiN1(-1), oi0(0);
   assert (!oi_.has_value());
   
@@ -357,12 +357,12 @@ int main()
   test_custom_storage();
   test_bool_storage();
   test_unsafe_raw_value();
-  test_evp_fp_nan();
-  test_evp_value_init();
-  test_evp_stl_empty();
-  test_evp_raw_storage();
+  test_mark_fp_nan();
+  test_mark_value_init();
+  test_mark_stl_empty();
+  test_mark_raw_storage();
 #if defined AK_TOOLBOX_USING_BOOST
   test_optional_as_storage();
 #endif
-  test_evp_enum();
+  test_mark_enum();
 }

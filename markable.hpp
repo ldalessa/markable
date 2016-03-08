@@ -62,7 +62,7 @@ struct markable_type
 };
 
 template <typename T, T Val>
-struct evp_int : markable_type<T>
+struct mark_int : markable_type<T>
 {
   static AK_TOOLBOX_CONSTEXPR T empty_value() AK_TOOLBOX_NOEXCEPT { return Val; }
   static AK_TOOLBOX_CONSTEXPR bool is_empty_value(T v) { return v == Val; }
@@ -77,28 +77,28 @@ struct empty_scalar_value : markable_type<T>
 };
 
 template <typename FPT>
-struct evp_fp_nan : markable_type<FPT>
+struct mark_fp_nan : markable_type<FPT>
 {
   static AK_TOOLBOX_CONSTEXPR FPT empty_value() AK_TOOLBOX_NOEXCEPT { return std::numeric_limits<FPT>::quiet_NaN(); }
   static AK_TOOLBOX_CONSTEXPR bool is_empty_value(FPT v) { return v != v; }
 };
 
 template <typename T> // requires Regular<T>
-struct evp_value_init : markable_type<T>
+struct mark_value_init : markable_type<T>
 {
   static AK_TOOLBOX_CONSTEXPR T empty_value() AK_TOOLBOX_NOEXCEPT_AS(T()) { return T(); }
   static AK_TOOLBOX_CONSTEXPR bool is_empty_value(const T& v) { return v == T(); }
 };
 
 template <typename T>
-struct evp_stl_empty : markable_type<T>
+struct mark_stl_empty : markable_type<T>
 {
   static AK_TOOLBOX_CONSTEXPR T empty_value() AK_TOOLBOX_NOEXCEPT_AS(T()) { return T(); }
   static AK_TOOLBOX_CONSTEXPR bool is_empty_value(const T& v) { return v.empty(); }
 };
 
 template <typename OT>
-struct evp_optional : markable_type<typename OT::value_type, OT>
+struct mark_optional : markable_type<typename OT::value_type, OT>
 {
   typedef typename OT::value_type value_type;
   typedef OT storage_type;
@@ -111,7 +111,7 @@ struct evp_optional : markable_type<typename OT::value_type, OT>
   static storage_type store_value(value_type&& v) { return std::move(v); }
 };
 
-struct evp_bool : markable_type<bool, char, bool>
+struct mark_bool : markable_type<bool, char, bool>
 {
   static AK_TOOLBOX_CONSTEXPR char empty_value() AK_TOOLBOX_NOEXCEPT { return char(2); }
   static AK_TOOLBOX_CONSTEXPR bool is_empty_value(char v) { return v == 2; }
@@ -120,7 +120,7 @@ struct evp_bool : markable_type<bool, char, bool>
   static AK_TOOLBOX_CONSTEXPR char store_value(const bool& v) { return v; }
 };
 
-typedef evp_bool compact_bool;
+typedef mark_bool compact_bool;
 
 
 struct markable_pod_storage_type_tag{};
@@ -149,9 +149,9 @@ struct markable_pod_storage_type : markable_pod_storage_type_tag
 
 #ifndef AK_TOOLBOX_NO_UNDERLYING_TYPE
 template <typename Enum, typename std::underlying_type<Enum>::type Val> 
-struct evp_enum : markable_pod_storage_type<Enum, typename std::underlying_type<Enum>::type>
+struct mark_enum : markable_pod_storage_type<Enum, typename std::underlying_type<Enum>::type>
 {
-  static_assert(std::is_enum<Enum>::value, "evp_enum only works with enum types");
+  static_assert(std::is_enum<Enum>::value, "mark_enum only works with enum types");
   typedef markable_pod_storage_type<Enum, typename std::underlying_type<Enum>::type> base;
   typedef typename base::storage_type storage_type;
   
@@ -160,7 +160,7 @@ struct evp_enum : markable_pod_storage_type<Enum, typename std::underlying_type<
 };
 #else
 template <typename Enum, int Val> 
-struct evp_enum : markable_pod_storage_type<Enum, int>
+struct mark_enum : markable_pod_storage_type<Enum, int>
 {
   typedef markable_pod_storage_type<Enum, int> base;
   typedef typename base::storage_type storage_type;
@@ -372,13 +372,13 @@ using markable_ns::empty_scalar_value;
 using markable_ns::markable_type;
 using markable_ns::markable_pod_storage_type;
 using markable_ns::compact_bool;
-using markable_ns::evp_bool;
-using markable_ns::evp_int;
-using markable_ns::evp_fp_nan;
-using markable_ns::evp_value_init;
-using markable_ns::evp_optional;
-using markable_ns::evp_stl_empty;
-using markable_ns::evp_enum;
+using markable_ns::mark_bool;
+using markable_ns::mark_int;
+using markable_ns::mark_fp_nan;
+using markable_ns::mark_value_init;
+using markable_ns::mark_optional;
+using markable_ns::mark_stl_empty;
+using markable_ns::mark_enum;
 
 } // namespace ak_toolbox
 
