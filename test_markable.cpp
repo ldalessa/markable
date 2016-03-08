@@ -23,7 +23,7 @@ void ignore(T&&) {}
 void test_value_ctor()
 {
   {
-    typedef compact_optional< evp_int<int, -1> > opt_int;
+    typedef markable< evp_int<int, -1> > opt_int;
     static_assert (sizeof(opt_int) == sizeof(int), "size waste");
     
     opt_int oi_, oiN1(-1), oi0(0), oi1(1);
@@ -36,7 +36,7 @@ void test_value_ctor()
     assert (oi1.value() == 1);
   }
   {
-    typedef compact_optional< evp_int<int, 0> > opt_int;
+    typedef markable< evp_int<int, 0> > opt_int;
     static_assert (sizeof(opt_int) == sizeof(int), "size waste");
     opt_int oi_, oiN1(-1), oi0(0), oi1(1);
     assert (!oi_.has_value());
@@ -49,7 +49,7 @@ void test_value_ctor()
   }
 }
 
-struct string_empty_value : compact_optional_type<std::string>
+struct string_empty_value : markable_type<std::string>
 {
   static std::string empty_value() { return std::string("\0\0", 2); }
   static bool is_empty_value(const std::string& v) { return v == std::string("\0\0", 2); }
@@ -57,7 +57,7 @@ struct string_empty_value : compact_optional_type<std::string>
 
 void test_string_traits()
 {
-  typedef compact_optional<string_empty_value, class tag_X> opt_str;
+  typedef markable<string_empty_value, class tag_X> opt_str;
   static_assert (sizeof(opt_str) == sizeof(std::string), "size waste");
   
   opt_str os_, os00(std::string("\0\0", 2)), os0(std::string("\0")), osA(std::string("A"));
@@ -67,7 +67,7 @@ void test_string_traits()
   assert ( osA.has_value());
 }
 
-struct string_in_pair_empty_val : compact_optional_type< std::string, std::pair<bool, std::string> >
+struct string_in_pair_empty_val : markable_type< std::string, std::pair<bool, std::string> >
 {
   static storage_type empty_value() { return storage_type(false, "anything"); }
   static bool is_empty_value(const storage_type& v) { return v.first == false; }
@@ -79,7 +79,7 @@ struct string_in_pair_empty_val : compact_optional_type< std::string, std::pair<
 
 void test_custom_storage()
 {
-  typedef compact_optional<string_in_pair_empty_val> opt_str;
+  typedef markable<string_in_pair_empty_val> opt_str;
   opt_str os_, os0(std::string("\0")), osA(std::string("A"));
   
   assert (!os_.has_value());
@@ -99,7 +99,7 @@ void test_custom_storage()
 
 void test_bool_storage()
 {
-  typedef compact_optional<evp_bool> opt_bool;
+  typedef markable<evp_bool> opt_bool;
   static_assert (sizeof(opt_bool) == 1, "size waste");
   
   opt_bool ob_, obT(true), obF(false);
@@ -114,7 +114,7 @@ void test_bool_storage()
 
 void test_unsafe_raw_value()
 {
-  typedef compact_optional< evp_int<int, -1> > opt_int;
+  typedef markable< evp_int<int, -1> > opt_int;
   opt_int oi_, oiN1(-1), oi0(0), oi1(1);
   
   assert ( oi_.unsafe_raw_value() == -1);
@@ -125,7 +125,7 @@ void test_unsafe_raw_value()
 
 void test_evp_fp_nan()
 {
-  typedef compact_optional<evp_fp_nan<double>> opt_double;
+  typedef markable<evp_fp_nan<double>> opt_double;
   opt_double o_, o1 (1.0), oNan (0.0/0.0);
   assert (!o_.has_value());
   assert ( o1.has_value());
@@ -147,7 +147,7 @@ void test_evp_fp_nan()
 void test_evp_value_init()
 {
   {
-    typedef compact_optional<evp_value_init<int>> opt_t;
+    typedef markable<evp_value_init<int>> opt_t;
     opt_t o_, o1 (1), oE(0);
     
     assert (!o_.has_value());
@@ -161,7 +161,7 @@ void test_evp_value_init()
     assert (oE.unsafe_raw_value() == 0);
   }
   {
-    typedef compact_optional<evp_value_init<std::string>> opt_t;
+    typedef markable<evp_value_init<std::string>> opt_t;
     opt_t o_, o1 (std::string("one")), oE ((std::string()));
     
     assert (!o_.has_value());
@@ -199,7 +199,7 @@ void test_evp_stl_empty()
 {
   reset_globals();
   {
-    typedef compact_optional<evp_stl_empty<Cont>> opt_t;
+    typedef markable<evp_stl_empty<Cont>> opt_t;
     opt_t o_, o1 (Cont(false)), oE(Cont(true));
     
     assert (objects_created_with_value == 3);
@@ -213,7 +213,7 @@ void test_evp_stl_empty()
     assert (oE.unsafe_raw_value() == Cont(true));
   }
   {
-    typedef compact_optional<evp_stl_empty<std::string>> opt_t;
+    typedef markable<evp_stl_empty<std::string>> opt_t;
     opt_t o_, o1 (std::string("one")), oE ((std::string()));
     
     assert (!o_.has_value());
@@ -268,7 +268,7 @@ public:
   }
 };
 
-struct evp_minutes : compact_optional_pod_storage_type<minutes_since_midnight, int>
+struct evp_minutes : markable_pod_storage_type<minutes_since_midnight, int>
 {
   static storage_type empty_value() { return -1; }
   static bool is_empty_value(const storage_type& v) { return v == -1; }
@@ -278,7 +278,7 @@ void test_evp_raw_storage()
 {
   reset_globals();
   {
-    typedef compact_optional<evp_minutes> opt_time;
+    typedef markable<evp_minutes> opt_time;
     const minutes_since_midnight t0(0), tM(1439);
     opt_time ot_, ot0 (t0), otM(tM);
     assert (!ot_.has_value());
@@ -320,7 +320,7 @@ enum class Dir { N, E, S, W };
 
 void test_evp_enum()
 {
-  typedef compact_optional<evp_enum<Dir, -1>> opt_dir;
+  typedef markable<evp_enum<Dir, -1>> opt_dir;
   opt_dir o_, oN(Dir::N), oW(Dir::W);
   
   assert (!o_.has_value());
@@ -338,7 +338,7 @@ void test_evp_enum()
 #if defined AK_TOOLBOX_USING_BOOST
 void test_optional_as_storage()
 {
-  typedef compact_optional<evp_optional<boost::optional<int>>> opt_int;
+  typedef markable<evp_optional<boost::optional<int>>> opt_int;
   opt_int oi_, oiN1(-1), oi0(0);
   assert (!oi_.has_value());
   

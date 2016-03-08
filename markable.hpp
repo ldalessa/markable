@@ -45,12 +45,12 @@
 #endif
 
 namespace ak_toolbox {
-namespace compact_optional_ns {
+namespace markable_ns {
 
 struct default_tag{};
 
 template <typename T, typename NT = T, typename CREF = const T&>
-struct compact_optional_type
+struct markable_type
 {
   typedef T value_type;
   typedef NT storage_type;
@@ -62,7 +62,7 @@ struct compact_optional_type
 };
 
 template <typename T, T Val>
-struct evp_int : compact_optional_type<T>
+struct evp_int : markable_type<T>
 {
   static AK_TOOLBOX_CONSTEXPR T empty_value() AK_TOOLBOX_NOEXCEPT { return Val; }
   static AK_TOOLBOX_CONSTEXPR bool is_empty_value(T v) { return v == Val; }
@@ -70,35 +70,35 @@ struct evp_int : compact_optional_type<T>
 
 // for backward compatibility only:
 template <typename T, T Val>
-struct empty_scalar_value : compact_optional_type<T>
+struct empty_scalar_value : markable_type<T>
 {
   static AK_TOOLBOX_CONSTEXPR T empty_value() AK_TOOLBOX_NOEXCEPT { return Val; }
   static AK_TOOLBOX_CONSTEXPR bool is_empty_value(T v) { return v == Val; }
 };
 
 template <typename FPT>
-struct evp_fp_nan : compact_optional_type<FPT>
+struct evp_fp_nan : markable_type<FPT>
 {
   static AK_TOOLBOX_CONSTEXPR FPT empty_value() AK_TOOLBOX_NOEXCEPT { return std::numeric_limits<FPT>::quiet_NaN(); }
   static AK_TOOLBOX_CONSTEXPR bool is_empty_value(FPT v) { return v != v; }
 };
 
 template <typename T> // requires Regular<T>
-struct evp_value_init : compact_optional_type<T>
+struct evp_value_init : markable_type<T>
 {
   static AK_TOOLBOX_CONSTEXPR T empty_value() AK_TOOLBOX_NOEXCEPT_AS(T()) { return T(); }
   static AK_TOOLBOX_CONSTEXPR bool is_empty_value(const T& v) { return v == T(); }
 };
 
 template <typename T>
-struct evp_stl_empty : compact_optional_type<T>
+struct evp_stl_empty : markable_type<T>
 {
   static AK_TOOLBOX_CONSTEXPR T empty_value() AK_TOOLBOX_NOEXCEPT_AS(T()) { return T(); }
   static AK_TOOLBOX_CONSTEXPR bool is_empty_value(const T& v) { return v.empty(); }
 };
 
 template <typename OT>
-struct evp_optional : compact_optional_type<typename OT::value_type, OT>
+struct evp_optional : markable_type<typename OT::value_type, OT>
 {
   typedef typename OT::value_type value_type;
   typedef OT storage_type;
@@ -111,22 +111,7 @@ struct evp_optional : compact_optional_type<typename OT::value_type, OT>
   static storage_type store_value(value_type&& v) { return std::move(v); }
 };
 
-// for backwards compatibility only:
-template <typename OT>
-struct compact_optional_from_optional : compact_optional_type<typename OT::value_type, OT>
-{
-  typedef typename OT::value_type value_type;
-  typedef OT storage_type;
-
-  static OT empty_value() AK_TOOLBOX_NOEXCEPT { return OT(); }
-  static bool is_empty_value(const OT& v) { return !v; }
-  
-  static const value_type& access_value(const storage_type& v) { return *v; }
-  static storage_type store_value(const value_type& v) { return v; }
-  static storage_type store_value(value_type&& v) { return std::move(v); }
-};
-
-struct evp_bool : compact_optional_type<bool, char, bool>
+struct evp_bool : markable_type<bool, char, bool>
 {
   static AK_TOOLBOX_CONSTEXPR char empty_value() AK_TOOLBOX_NOEXCEPT { return char(2); }
   static AK_TOOLBOX_CONSTEXPR bool is_empty_value(char v) { return v == 2; }
@@ -138,7 +123,7 @@ struct evp_bool : compact_optional_type<bool, char, bool>
 typedef evp_bool compact_bool;
 
 
-struct compact_optional_pod_storage_type_tag{};
+struct markable_pod_storage_type_tag{};
 
 #ifndef AK_TOOLBOX_NO_ARVANCED_CXX11
 template <typename T, typename POD_T = typename std::aligned_storage<sizeof(T), alignof(T)>::type>
@@ -146,7 +131,7 @@ template <typename T, typename POD_T = typename std::aligned_storage<sizeof(T), 
 template <typename T, typename POD_T>
 #endif // AK_TOOLBOX_NO_ARVANCED_CXX11
 
-struct compact_optional_pod_storage_type : compact_optional_pod_storage_type_tag
+struct markable_pod_storage_type : markable_pod_storage_type_tag
 {
   static_assert(sizeof(T) == sizeof(POD_T), "pod storage for T has to have the same size and alignment as T");
   static_assert(std::is_pod<POD_T>::value, "second argument must be a POD type");
@@ -164,10 +149,10 @@ struct compact_optional_pod_storage_type : compact_optional_pod_storage_type_tag
 
 #ifndef AK_TOOLBOX_NO_UNDERLYING_TYPE
 template <typename Enum, typename std::underlying_type<Enum>::type Val> 
-struct evp_enum : compact_optional_pod_storage_type<Enum, typename std::underlying_type<Enum>::type>
+struct evp_enum : markable_pod_storage_type<Enum, typename std::underlying_type<Enum>::type>
 {
   static_assert(std::is_enum<Enum>::value, "evp_enum only works with enum types");
-  typedef compact_optional_pod_storage_type<Enum, typename std::underlying_type<Enum>::type> base;
+  typedef markable_pod_storage_type<Enum, typename std::underlying_type<Enum>::type> base;
   typedef typename base::storage_type storage_type;
   
   static storage_type empty_value() { return Val; }
@@ -175,9 +160,9 @@ struct evp_enum : compact_optional_pod_storage_type<Enum, typename std::underlyi
 };
 #else
 template <typename Enum, int Val> 
-struct evp_enum : compact_optional_pod_storage_type<Enum, int>
+struct evp_enum : markable_pod_storage_type<Enum, int>
 {
-  typedef compact_optional_pod_storage_type<Enum, int> base;
+  typedef markable_pod_storage_type<Enum, int> base;
   typedef typename base::storage_type storage_type;
   
   static storage_type empty_value() { return Val; }
@@ -317,13 +302,13 @@ template <typename T>
 struct storage_destruction
 {
 
-  typedef typename std::conditional<std::is_base_of<compact_optional_pod_storage_type_tag, T>::value,
+  typedef typename std::conditional<std::is_base_of<markable_pod_storage_type_tag, T>::value,
                                     buffer_storage<T>, 
                                     member_storage<T>>::type type;
 };
 
 template <typename N>
-class compact_optional_base : storage_destruction<N>::type
+class markable_base : storage_destruction<N>::type
 {
   typedef typename storage_destruction<N>::type base;
   base& as_base() { return static_cast<base&>(*this); }
@@ -332,18 +317,18 @@ protected:
   typedef typename N::value_type value_type;
   typedef typename N::storage_type storage_type;
   typedef typename N::reference_type reference_type;
-  void swap_storages(compact_optional_base& rhs) { as_base().swap_impl(rhs.as_base()); }
+  void swap_storages(markable_base& rhs) { as_base().swap_impl(rhs.as_base()); }
   
   AK_TOOLBOX_CONSTEXPR_NOCONST storage_type& raw_value() { return base::value_; }
   
 public:
-  AK_TOOLBOX_CONSTEXPR compact_optional_base() AK_TOOLBOX_NOEXCEPT_AS(base())
+  AK_TOOLBOX_CONSTEXPR markable_base() AK_TOOLBOX_NOEXCEPT_AS(base())
     : base() {}
     
-  AK_TOOLBOX_CONSTEXPR compact_optional_base(const value_type& v)
+  AK_TOOLBOX_CONSTEXPR markable_base(const value_type& v)
     : base(v) {}
     
-  AK_TOOLBOX_CONSTEXPR compact_optional_base(value_type&& v)
+  AK_TOOLBOX_CONSTEXPR markable_base(value_type&& v)
     : base(std::move(v)) {}
     
   AK_TOOLBOX_CONSTEXPR bool has_value() const { return !N::is_empty_value(base::value_); }
@@ -356,45 +341,44 @@ public:
 } // namespace detail_
 
 template <typename N, typename /* tag */ = default_tag>
-class compact_optional : public detail_::compact_optional_base<N>
+class markable : public detail_::markable_base<N>
 {
-  typedef detail_::compact_optional_base<N> super;
+  typedef detail_::markable_base<N> super;
   
 public:
   typedef typename N::value_type value_type;
   typedef typename N::storage_type storage_type;
   typedef typename N::reference_type reference_type;
 
-  AK_TOOLBOX_CONSTEXPR compact_optional() AK_TOOLBOX_NOEXCEPT_AS(storage_type(N::empty_value()))
+  AK_TOOLBOX_CONSTEXPR markable() AK_TOOLBOX_NOEXCEPT_AS(storage_type(N::empty_value()))
     : super() {}
     
-  AK_TOOLBOX_CONSTEXPR compact_optional(const value_type& v)
+  AK_TOOLBOX_CONSTEXPR markable(const value_type& v)
     : super(v) {}
     
-  AK_TOOLBOX_CONSTEXPR compact_optional(value_type&& v)
+  AK_TOOLBOX_CONSTEXPR markable(value_type&& v)
     : super(std::move(v)) {}
 
-  friend void swap(compact_optional& l, compact_optional&r)
+  friend void swap(markable& l, markable&r)
   {
     l.swap_storages(r);
   }
 };
 
-} // namespace compact_optional_ns
+} // namespace markable_ns
 
-using compact_optional_ns::compact_optional;
-using compact_optional_ns::empty_scalar_value;
-using compact_optional_ns::compact_optional_type;
-using compact_optional_ns::compact_optional_pod_storage_type;
-using compact_optional_ns::compact_optional_from_optional;
-using compact_optional_ns::compact_bool;
-using compact_optional_ns::evp_bool;
-using compact_optional_ns::evp_int;
-using compact_optional_ns::evp_fp_nan;
-using compact_optional_ns::evp_value_init;
-using compact_optional_ns::evp_optional;
-using compact_optional_ns::evp_stl_empty;
-using compact_optional_ns::evp_enum;
+using markable_ns::markable;
+using markable_ns::empty_scalar_value;
+using markable_ns::markable_type;
+using markable_ns::markable_pod_storage_type;
+using markable_ns::compact_bool;
+using markable_ns::evp_bool;
+using markable_ns::evp_int;
+using markable_ns::evp_fp_nan;
+using markable_ns::evp_value_init;
+using markable_ns::evp_optional;
+using markable_ns::evp_stl_empty;
+using markable_ns::evp_enum;
 
 } // namespace ak_toolbox
 
