@@ -64,37 +64,37 @@ struct markable_type
 template <typename T, T Val>
 struct mark_int : markable_type<T>
 {
-  static AK_TOOLBOX_CONSTEXPR T empty_value() AK_TOOLBOX_NOEXCEPT { return Val; }
-  static AK_TOOLBOX_CONSTEXPR bool is_empty_value(T v) { return v == Val; }
+  static AK_TOOLBOX_CONSTEXPR T marked_value() AK_TOOLBOX_NOEXCEPT { return Val; }
+  static AK_TOOLBOX_CONSTEXPR bool is_marked_value(T v) { return v == Val; }
 };
 
 // for backward compatibility only:
 template <typename T, T Val>
 struct empty_scalar_value : markable_type<T>
 {
-  static AK_TOOLBOX_CONSTEXPR T empty_value() AK_TOOLBOX_NOEXCEPT { return Val; }
-  static AK_TOOLBOX_CONSTEXPR bool is_empty_value(T v) { return v == Val; }
+  static AK_TOOLBOX_CONSTEXPR T marked_value() AK_TOOLBOX_NOEXCEPT { return Val; }
+  static AK_TOOLBOX_CONSTEXPR bool is_marked_value(T v) { return v == Val; }
 };
 
 template <typename FPT>
 struct mark_fp_nan : markable_type<FPT>
 {
-  static AK_TOOLBOX_CONSTEXPR FPT empty_value() AK_TOOLBOX_NOEXCEPT { return std::numeric_limits<FPT>::quiet_NaN(); }
-  static AK_TOOLBOX_CONSTEXPR bool is_empty_value(FPT v) { return v != v; }
+  static AK_TOOLBOX_CONSTEXPR FPT marked_value() AK_TOOLBOX_NOEXCEPT { return std::numeric_limits<FPT>::quiet_NaN(); }
+  static AK_TOOLBOX_CONSTEXPR bool is_marked_value(FPT v) { return v != v; }
 };
 
 template <typename T> // requires Regular<T>
 struct mark_value_init : markable_type<T>
 {
-  static AK_TOOLBOX_CONSTEXPR T empty_value() AK_TOOLBOX_NOEXCEPT_AS(T()) { return T(); }
-  static AK_TOOLBOX_CONSTEXPR bool is_empty_value(const T& v) { return v == T(); }
+  static AK_TOOLBOX_CONSTEXPR T marked_value() AK_TOOLBOX_NOEXCEPT_AS(T()) { return T(); }
+  static AK_TOOLBOX_CONSTEXPR bool is_marked_value(const T& v) { return v == T(); }
 };
 
 template <typename T>
 struct mark_stl_empty : markable_type<T>
 {
-  static AK_TOOLBOX_CONSTEXPR T empty_value() AK_TOOLBOX_NOEXCEPT_AS(T()) { return T(); }
-  static AK_TOOLBOX_CONSTEXPR bool is_empty_value(const T& v) { return v.empty(); }
+  static AK_TOOLBOX_CONSTEXPR T marked_value() AK_TOOLBOX_NOEXCEPT_AS(T()) { return T(); }
+  static AK_TOOLBOX_CONSTEXPR bool is_marked_value(const T& v) { return v.empty(); }
 };
 
 template <typename OT>
@@ -103,8 +103,8 @@ struct mark_optional : markable_type<typename OT::value_type, OT>
   typedef typename OT::value_type value_type;
   typedef OT storage_type;
 
-  static OT empty_value() AK_TOOLBOX_NOEXCEPT { return OT(); }
-  static bool is_empty_value(const OT& v) { return !v; }
+  static OT marked_value() AK_TOOLBOX_NOEXCEPT { return OT(); }
+  static bool is_marked_value(const OT& v) { return !v; }
   
   static const value_type& access_value(const storage_type& v) { return *v; }
   static storage_type store_value(const value_type& v) { return v; }
@@ -113,8 +113,8 @@ struct mark_optional : markable_type<typename OT::value_type, OT>
 
 struct mark_bool : markable_type<bool, char, bool>
 {
-  static AK_TOOLBOX_CONSTEXPR char empty_value() AK_TOOLBOX_NOEXCEPT { return char(2); }
-  static AK_TOOLBOX_CONSTEXPR bool is_empty_value(char v) { return v == 2; }
+  static AK_TOOLBOX_CONSTEXPR char marked_value() AK_TOOLBOX_NOEXCEPT { return char(2); }
+  static AK_TOOLBOX_CONSTEXPR bool is_marked_value(char v) { return v == 2; }
   
   static AK_TOOLBOX_CONSTEXPR bool access_value(const char& v) { return bool(v); }
   static AK_TOOLBOX_CONSTEXPR char store_value(const bool& v) { return v; }
@@ -155,8 +155,8 @@ struct mark_enum : markable_pod_storage_type<Enum, typename std::underlying_type
   typedef markable_pod_storage_type<Enum, typename std::underlying_type<Enum>::type> base;
   typedef typename base::storage_type storage_type;
   
-  static storage_type empty_value() { return Val; }
-  static bool is_empty_value(const storage_type& v) { return v == Val; }
+  static storage_type marked_value() { return Val; }
+  static bool is_marked_value(const storage_type& v) { return v == Val; }
 };
 #else
 template <typename Enum, int Val> 
@@ -165,8 +165,8 @@ struct mark_enum : markable_pod_storage_type<Enum, int>
   typedef markable_pod_storage_type<Enum, int> base;
   typedef typename base::storage_type storage_type;
   
-  static storage_type empty_value() { return Val; }
-  static bool is_empty_value(const storage_type& v) { return v == Val; }
+  static storage_type marked_value() { return Val; }
+  static bool is_marked_value(const storage_type& v) { return v == Val; }
 };
 #endif // AK_TOOLBOX_NO_UNDERLYING_TYPE
 
@@ -182,8 +182,8 @@ struct member_storage
   
   storage_type value_;
   
-  AK_TOOLBOX_CONSTEXPR member_storage() AK_TOOLBOX_NOEXCEPT_AS(storage_type(EVP::empty_value()))
-    : value_(EVP::empty_value()) {}
+  AK_TOOLBOX_CONSTEXPR member_storage() AK_TOOLBOX_NOEXCEPT_AS(storage_type(EVP::marked_value()))
+    : value_(EVP::marked_value()) {}
     
   AK_TOOLBOX_CONSTEXPR member_storage(const value_type& v)
     : value_(EVP::store_value(v)) {}
@@ -212,28 +212,28 @@ private:
   void construct(const value_type& v) { ::new (address()) value_type(v); }
   void construct(value_type&& v) { ::new (address()) value_type(std::move(v)); }
   void call_destructor() { as_value_type().value_type::~value_type(); }
-  void destroy() { call_destructor(); value_ = EVP::empty_value(); } // TODO: "fill_empty_value_pattern"
-  bool has_value() const { return !EVP::is_empty_value(value_); }
+  void destroy() { call_destructor(); value_ = EVP::marked_value(); } // TODO: "fill_marked_value_pattern"
+  bool has_value() const { return !EVP::is_marked_value(value_); }
   value_type& as_value_type() { return reinterpret_cast<value_type&>(value_); }
   const value_type& as_value_type() const { return reinterpret_cast<const value_type&>(value_); }
   
 public:
-  buffer_storage() AK_TOOLBOX_NOEXCEPT_AS(storage_type(EVP::empty_value()))
-    : value_(EVP::empty_value()) {}
+  buffer_storage() AK_TOOLBOX_NOEXCEPT_AS(storage_type(EVP::marked_value()))
+    : value_(EVP::marked_value()) {}
     
-  buffer_storage(const value_type& v) : value_(EVP::empty_value())
+  buffer_storage(const value_type& v) : value_(EVP::marked_value())
     { construct(v); }
     
-  buffer_storage(value_type&& v) : value_(EVP::empty_value())
+  buffer_storage(value_type&& v) : value_(EVP::marked_value())
     { construct(std::move(v)); }
     
-  buffer_storage(const buffer_storage& rhs) : value_(EVP::empty_value())
+  buffer_storage(const buffer_storage& rhs) : value_(EVP::marked_value())
     {
       if (rhs.has_value())
         construct(rhs.as_value_type());
     }
     
-  buffer_storage(buffer_storage&& rhs) : value_(EVP::empty_value())
+  buffer_storage(buffer_storage&& rhs) : value_(EVP::marked_value())
     {
       if (rhs.has_value())
         construct(std::move(rhs.as_value_type())); // TODO: add move
@@ -331,7 +331,7 @@ public:
   AK_TOOLBOX_CONSTEXPR markable_base(value_type&& v)
     : base(std::move(v)) {}
     
-  AK_TOOLBOX_CONSTEXPR bool has_value() const { return !N::is_empty_value(base::value_); }
+  AK_TOOLBOX_CONSTEXPR bool has_value() const { return !N::is_marked_value(base::value_); }
   
   AK_TOOLBOX_CONSTEXPR reference_type value() const { return AK_TOOLBOX_ASSERTED_EXPRESSION(has_value(), N::access_value(base::value_)); }
   
@@ -350,7 +350,7 @@ public:
   typedef typename N::storage_type storage_type;
   typedef typename N::reference_type reference_type;
 
-  AK_TOOLBOX_CONSTEXPR markable() AK_TOOLBOX_NOEXCEPT_AS(storage_type(N::empty_value()))
+  AK_TOOLBOX_CONSTEXPR markable() AK_TOOLBOX_NOEXCEPT_AS(storage_type(N::marked_value()))
     : super() {}
     
   AK_TOOLBOX_CONSTEXPR markable(const value_type& v)

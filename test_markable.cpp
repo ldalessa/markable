@@ -49,15 +49,15 @@ void test_value_ctor()
   }
 }
 
-struct string_empty_value : markable_type<std::string>
+struct string_marked_value : markable_type<std::string>
 {
-  static std::string empty_value() { return std::string("\0\0", 2); }
-  static bool is_empty_value(const std::string& v) { return v == std::string("\0\0", 2); }
+  static std::string marked_value() { return std::string("\0\0", 2); }
+  static bool is_marked_value(const std::string& v) { return v == std::string("\0\0", 2); }
 };
 
 void test_string_traits()
 {
-  typedef markable<string_empty_value, class tag_X> opt_str;
+  typedef markable<string_marked_value, class tag_X> opt_str;
   static_assert (sizeof(opt_str) == sizeof(std::string), "size waste");
   
   opt_str os_, os00(std::string("\0\0", 2)), os0(std::string("\0")), osA(std::string("A"));
@@ -69,8 +69,8 @@ void test_string_traits()
 
 struct string_in_pair_empty_val : markable_type< std::string, std::pair<bool, std::string> >
 {
-  static storage_type empty_value() { return storage_type(false, "anything"); }
-  static bool is_empty_value(const storage_type& v) { return v.first == false; }
+  static storage_type marked_value() { return storage_type(false, "anything"); }
+  static bool is_marked_value(const storage_type& v) { return v.first == false; }
   
   static const value_type& access_value(const storage_type& v) { return v.second; }
   static storage_type store_value(const value_type& v) { return storage_type(true, v); }
@@ -270,8 +270,8 @@ public:
 
 struct mark_minutes : markable_pod_storage_type<minutes_since_midnight, int>
 {
-  static storage_type empty_value() { return -1; }
-  static bool is_empty_value(const storage_type& v) { return v == -1; }
+  static storage_type marked_value() { return -1; }
+  static bool is_marked_value(const storage_type& v) { return v == -1; }
 };
 
 void test_mark_raw_storage()

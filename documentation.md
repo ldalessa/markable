@@ -63,9 +63,9 @@ Each instance of `markable` also provides three nested types:
 * `reference_type` - what function `value` returns: in most cases it is `const value_type&`,
 * `storage_type` - type of the value that is used for storage: in most of the cases it is same as `value_type`.
 
-## Empty-value policies
+## Marked-value policies
 
-What type is being stored and how the empty value is encoded is controlled by _empty-value policy_. You can either define your own, or use one of the policies provided with this library:
+What type is being stored and how the marked value is encoded is controlled by _marked-value policy_. You can either define your own, or use one of the policies provided with this library:
 
 ### mark_int
 
@@ -139,15 +139,15 @@ This policy is used for types that cannot (or do not want to) spare any value to
 
 ### Defining a custom empty-value policy
 
-In order to provide a custom empty-value policy to store a given type `T`, we need to provide a class that derive it from `markable_type<T>` and implements two static member functions: `empty_value` and `is_empty_value`:
+In order to provide a custom empty-value policy to store a given type `T`, we need to provide a class that derive it from `markable_type<T>` and implements two static member functions: `marked_value` and `is_marked_value`:
 
 ```c++
 struct mark_string_with_0s : markable_type<std::string>
 {
-  static storage_type empty_value() { 
+  static storage_type marked_value() { 
     return std::string("\0\0", 2);
   }
-  static bool is_empty_value(const storage_type& v) {
+  static bool is_marked_value(const storage_type& v) {
     return v.compare(0, v.npos, "\0\0", 2) == 0;
   }
 };
@@ -155,17 +155,17 @@ struct mark_string_with_0s : markable_type<std::string>
 
 Base class `markable_type<T>` defines all the necessary nested types and some house-keeping functions. With it, we are declaring what type we will be storing.
 
-Function `empty_value` returns a value of the stored type (`storage_type`) that represents the empty value.
+Function `marked_value` returns a value of the stored type (`storage_type`) that represents the empty value.
 
-Function `is_empty_value` returns true iff the the given value is recognized as the empty value.
+Function `is_marked_value` returns true iff the the given value is recognized as the empty value.
 
 In a less likely case where we want to store the represent an optional value of type `T`, but store it internally in a different type, we need to provide more arguments to `markable_type<T>`. Suppose we want to implement the policy for storing type `bool` in a storage of size 1 (the same way that `mark_bool` does). We need three states: no-value, `true`, and `false`. We cannot store it in type `bool` because it only has two states. So, for storage we will use type `char`. We will use value `2` (`'\2'`) to represent the empty state, value `0` to represent value `false` and `1` to represent `true`. Now, apart from defining how the empty state is encodes, we also need to provide a recipe on how to encode a `bool` in a `char`, and how to extract the `bool` value from `char` storage. We need to define additional two static member functions: `access_value` and `store_value`:
 
 ```c++
 struct compact_bool_policy : markable_type<bool, char, bool> // see below
 {
-  static storage_type empty_value() { return char(2); }
-  static bool is_empty_value(storage_type v) { return v == 2; }
+  static storage_type marked_value() { return char(2); }
+  static bool is_marked_value(storage_type v) { return v == 2; }
   
   static reference_type access_value(const storage_type& v) { return bool(v); }
   static storage_type store_value(const value_type& v) { return v; }
@@ -216,12 +216,12 @@ Member subobject `min_` is expected to range from 0 (inclusive) to 1440 (exclusi
 ```c++
 struct mark_minutes : markable_pod_storage_type<minutes_since_midnight, int>
 {
-  static storage_type empty_value() { return -1; }
-  static bool is_empty_value(const storage_type& v) { return v == -1; }
+  static storage_type marked_value() { return -1; }
+  static bool is_marked_value(const storage_type& v) { return v == -1; }
 };
 ```
 
-The first argument is the type we want to represent; the second type (`int`) is the POD type, of the same size and alignment as `T` (the first argument). If it is not provided, the implementation uses `std::aligned_storage_t<sizeof(T), alignof(T)>`. the two functions `empty_value` and `is_empty_value` describe the empty value on the POD type, where no invariant is enforced.
+The first argument is the type we want to represent; the second type (`int`) is the POD type, of the same size and alignment as `T` (the first argument). If it is not provided, the implementation uses `std::aligned_storage_t<sizeof(T), alignof(T)>`. the two functions `marked_value` and `is_marked_value` describe the empty value on the POD type, where no invariant is enforced.
 
 ## Type-altering tag
 
