@@ -72,6 +72,7 @@ namespace ak_toolbox
     template <Mark_policy MP, typename Tag = default_tag>
     class markable
     {
+    public:
       typedef typename MP::value_type     value_type;
       typedef typename MP::storage_type   storage_type;
       typedef typename MP::reference_type reference_type;
@@ -83,6 +84,9 @@ namespace ak_toolbox
       constexpr bool has_value() const;
       constexpr reference_type value() const;
       constexpr storage_type const& storage_value() const;
+      
+    private:
+      storage_type val_; // exposition only
     };
   }
 }
@@ -91,3 +95,5 @@ namespace ak_toolbox
 #### `reference_type value() const`
 
 *Requires:* `has_value()`.
+
+*Returns:* `!MP::is_marked_value(val_)`.
