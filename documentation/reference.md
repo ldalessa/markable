@@ -92,10 +92,17 @@ namespace ak_toolbox
 }
 ```
 
-#### `reference_type value() const`
-
-*Requires:* `has_value()`.
+#### `reference_type has_value() const`
 
 *Returns:* `!MP::is_marked_value(val_)`.
 
 *Throws:* Nothing.
+
+
+#### `reference_type value() const`
+
+*Requires:* `has_value()`.
+
+*Returns:* `MP::access_value(val_)`.
+
+*Throws:* Whatever `MP::access_value` throws. Also, if `reference_type` is infact not a reference type, whatever `reference_type`'s move constructor throws.
