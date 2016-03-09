@@ -7,6 +7,8 @@ namespace ak_toolbox
   {
     template <typename MP, typename Tag>
     class markable;
+    
+    void swap(markable & l, markable & r);
   }
 
   using markable_ns::markable;
@@ -30,8 +32,10 @@ namespace ak_toolbox
       constexpr markable() noexcept(noexcept(storage_type(N::marked_value())));
       constexpr markable(const value_type& v);
       constexpr markable(value_type&& v);
-
-      friend void swap(markable & l, markable & r);
+      
+      constexpr bool has_value() const;
+      constexpr reference_type value() const;
+      constexpr storage_type const& storage_value() const;
     };
   }
 }
