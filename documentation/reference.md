@@ -40,3 +40,7 @@ namespace ak_toolbox
   }
 }
 ```
+
+#### `reference_type value() const`
+
+*Requires:* `has_value()`.
