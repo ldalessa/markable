@@ -97,3 +97,5 @@ namespace ak_toolbox
 *Requires:* `has_value()`.
 
 *Returns:* `!MP::is_marked_value(val_)`.
+
+*Throws:* Nothing.
