@@ -48,6 +48,9 @@ This represents the type of the sub-object physically stored inside markable obj
 #### `reference_type`
 This represents the type returned when the user requests read access to the stored value. Typically, this type is defined as `const value_type&`, however, sometimes when the accessed value is computed on the fly, this type may be defined as `value_type`.
 
+#### `{ MP::marked_value() } -> typename MP::storage_type`
+Returns a marked value of type `storage_type`. This will be later used to represent a markable object with no value.
+
 ## Class template `markable`
 
 ```c++
