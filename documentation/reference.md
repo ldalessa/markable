@@ -105,4 +105,4 @@ namespace ak_toolbox
 
 *Returns:* `MP::access_value(val_)`.
 
-*Throws:* Whatever `MP::access_value` throws. Also, if `reference_type` is infact not a reference type, whatever `reference_type`'s move constructor throws.
+*Throws:* Whatever `MP::access_value` throws. Also, if `reference_type` is in fact not a reference type, whatever `reference_type`'s move constructor throws.
