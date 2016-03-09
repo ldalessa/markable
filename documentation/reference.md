@@ -36,11 +36,14 @@ concept bool Mark_policy = requires()
 };
 ```
 
-`value_type` represents the type 'logically' stored by the markable object. Markable object tries to make an impression on the users that it is internally storing an objectof type `value_type`, which is often the case, but not always.
+#### `value_type`
+represents the type 'logically' stored by the markable object. Markable object tries to make an impression on the users that it is internally storing an objectof type `value_type`, which is often the case, but not always.
 
-`storage_type` represents the type of the sub-object physically stored inside markable object, which is used to store the value of the object as well as the empty-state mark. 
+#### `storage_type`
+represents the type of the sub-object physically stored inside markable object, which is used to store the value of the object as well as the empty-state mark. 
 
-`reference_type` represents the type returned when the user requests read access to the stored value. Typically, this type is defined as `const value_type&`, however, sometimes when the accessed value is computed on the fly, this type may be defined as `value_type`.
+#### `reference_type`
+represents the type returned when the user requests read access to the stored value. Typically, this type is defined as `const value_type&`, however, sometimes when the accessed value is computed on the fly, this type may be defined as `value_type`.
 
 ## Class template `markable`
 
