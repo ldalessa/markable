@@ -36,6 +36,8 @@ concept bool Mark_policy = requires()
 };
 ```
 
+`reference_type` represents the type of the sub-object physically stored inside markable object, which is used to store the the value of the object as well as the empty-state mark. 
+
 ## Class template `markable`
 
 ```c++
