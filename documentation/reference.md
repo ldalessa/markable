@@ -34,7 +34,7 @@ concept bool Mark_policy = requires()
     
     { MP::access_value(s) }            -> typename MP::reference_type;
     { MP::store_value(cv) }            -> typename MP::storage_type;
-    { MP::store_value(std::move(rv)) } -> typename MP::value_type;
+    { MP::store_value(std::move(rv)) } -> typename MP::storage_type;
   };
 };
 ```
@@ -48,11 +48,16 @@ This represents the type of the sub-object physically stored inside markable obj
 #### `reference_type`
 This represents the type returned when the user requests read access to the stored value. Typically, this type is defined as `const value_type&`, however, sometimes when the accessed value is computed on the fly, this type may be defined as `value_type`.
 
-#### `{ MP::marked_value() } -> typename MP::storage_type`
+#### `{ marked_value() } -> storage_type`
 Returns a marked value encoded in `storage_type`. This will be later used to represent a markable object with no value.
 
-#### `{ MP::is_marked_value(s) } -> bool`
+#### `{ is_marked_value(s) } -> bool`
 Checks if the given value represents a marked value.
+
+#### `{ access_value(s) } -> reference_type`
+*Requires:* `!is_marked_value(s)`.
+
+Given a value encoded in `storage_type`, provides access to it as type `reference_type`.
 
 ## Class template `markable`
 
