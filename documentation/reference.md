@@ -25,11 +25,11 @@ namespace ak_toolbox
     template <typename MP, typename Tag = default_tag>
     class markable
     {
-      typedef typename MP::value_type value_type;
-      typedef typename MP::storage_type storage_type;
+      typedef typename MP::value_type     value_type;
+      typedef typename MP::storage_type   storage_type;
       typedef typename MP::reference_type reference_type;
 
-      constexpr markable() noexcept(noexcept(storage_type(N::marked_value())));
+      constexpr markable() noexcept(noexcept(storage_type{MP::marked_value{}}));
       constexpr markable(const value_type& v);
       constexpr markable(value_type&& v);
       
