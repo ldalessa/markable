@@ -57,7 +57,10 @@ Checks if the given value represents a marked value.
 #### `{ access_value(s) } -> reference_type`
 *Requires:* `!is_marked_value(s)`.
 
-Given a value encoded in `storage_type`, provides access to it as type `reference_type`.
+Given a value encoded in `storage_type`, provides access to it through type `reference_type`.
+
+#### `{ store_value(v) } -> storage_type`
+Given a value of type `value_type` (possibly marked), returns its representation as `storage_type`. Typically, when `value_type` and `storage_type` are same type, this is an identity function.
 
 ## Class template `markable`
 
