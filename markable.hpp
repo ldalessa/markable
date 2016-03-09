@@ -335,7 +335,7 @@ public:
   
   AK_TOOLBOX_CONSTEXPR reference_type value() const { return AK_TOOLBOX_ASSERTED_EXPRESSION(has_value(), N::access_value(base::value_)); }
   
-  AK_TOOLBOX_CONSTEXPR storage_type const& unsafe_raw_value() const { return base::value_; }
+  AK_TOOLBOX_CONSTEXPR storage_type const& storage_value() const { return base::value_; }
 };
 
 } // namespace detail_

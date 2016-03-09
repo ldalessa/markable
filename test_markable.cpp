@@ -112,15 +112,15 @@ void test_bool_storage()
   assert (obF.value() == false);
 }
 
-void test_unsafe_raw_value()
+void test_storage_value()
 {
   typedef markable< mark_int<int, -1> > opt_int;
   opt_int oi_, oiN1(-1), oi0(0), oi1(1);
   
-  assert ( oi_.unsafe_raw_value() == -1);
-  assert (oiN1.unsafe_raw_value() == -1);
-  assert ( oi0.unsafe_raw_value() ==  0);
-  assert ( oi1.unsafe_raw_value() ==  1);
+  assert ( oi_.storage_value() == -1);
+  assert (oiN1.storage_value() == -1);
+  assert ( oi0.storage_value() ==  0);
+  assert ( oi1.storage_value() ==  1);
 }
 
 void test_mark_fp_nan()
@@ -133,14 +133,14 @@ void test_mark_fp_nan()
   
   assert (o1.value() == 1.0);
   
-  double v = o_.unsafe_raw_value();
+  double v = o_.storage_value();
   assert (v != v);
   
-  v = o1.unsafe_raw_value();
+  v = o1.storage_value();
   assert (v == 1.0);
   assert (v == v);
   
-  v = oNan.unsafe_raw_value();
+  v = oNan.storage_value();
   assert (v != v);
 }
 
@@ -156,9 +156,9 @@ void test_mark_value_init()
     
     assert (o1.value() == 1);
     
-    assert (o_.unsafe_raw_value() == 0);
-    assert (o1.unsafe_raw_value() == 1);
-    assert (oE.unsafe_raw_value() == 0);
+    assert (o_.storage_value() == 0);
+    assert (o1.storage_value() == 1);
+    assert (oE.storage_value() == 0);
   }
   {
     typedef markable<mark_value_init<std::string>> opt_t;
@@ -170,9 +170,9 @@ void test_mark_value_init()
     
     assert (o1.value() == "one");
     
-    assert (o_.unsafe_raw_value() == "");
-    assert (o1.unsafe_raw_value() == "one");
-    assert (oE.unsafe_raw_value() == "");
+    assert (o_.storage_value() == "");
+    assert (o1.storage_value() == "one");
+    assert (oE.storage_value() == "");
   }
 }
 
@@ -208,9 +208,9 @@ void test_mark_stl_empty()
     assert (!oE.has_value());
     assert (objects_created_with_value == 3);
        
-    assert (o_.unsafe_raw_value() == Cont(true));
-    assert (o1.unsafe_raw_value() == Cont(false));
-    assert (oE.unsafe_raw_value() == Cont(true));
+    assert (o_.storage_value() == Cont(true));
+    assert (o1.storage_value() == Cont(false));
+    assert (oE.storage_value() == Cont(true));
   }
   {
     typedef markable<mark_stl_empty<std::string>> opt_t;
@@ -222,9 +222,9 @@ void test_mark_stl_empty()
     
     assert (o1.value() == "one");
     
-    assert (o_.unsafe_raw_value() == "");
-    assert (o1.unsafe_raw_value() == "one");
-    assert (oE.unsafe_raw_value() == "");
+    assert (o_.storage_value() == "");
+    assert (o1.storage_value() == "one");
+    assert (oE.storage_value() == "");
   }
 }
 
@@ -330,9 +330,9 @@ void test_mark_enum()
   assert (oN.value() == Dir::N);
   assert (oW.value() == Dir::W);
   
-  assert (o_.unsafe_raw_value() == -1);
-  assert (oN.unsafe_raw_value() ==  0);
-  assert (oW.unsafe_raw_value() ==  3);
+  assert (o_.storage_value() == -1);
+  assert (oN.storage_value() ==  0);
+  assert (oW.storage_value() ==  3);
 }
 
 #if defined AK_TOOLBOX_USING_BOOST
@@ -356,7 +356,7 @@ int main()
   test_string_traits();
   test_custom_storage();
   test_bool_storage();
-  test_unsafe_raw_value();
+  test_storage_value();
   test_mark_fp_nan();
   test_mark_value_init();
   test_mark_stl_empty();
