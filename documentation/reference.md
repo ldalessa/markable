@@ -29,8 +29,8 @@ concept bool Mark_policy = requires()
                     const typename MP::value_type & cv,
                     typename MP::value_type && rv)
   {
-    { MP::marked_value() } -> typename MP::value_type;
-    { MP::is_marked_value(cv) } -> bool;
+    { MP::marked_value() }     -> typename MP::storage_type;
+    { MP::is_marked_value(s) } -> bool;
     
     { MP::access_value(s) }            -> typename MP::reference_type;
     { MP::store_value(cv) }            -> typename MP::storage_type;
@@ -40,13 +40,13 @@ concept bool Mark_policy = requires()
 ```
 
 #### `value_type`
-represents the type 'logically' stored by the markable object. Markable object tries to make an impression on the users that it is internally storing an objectof type `value_type`, which is often the case, but not always.
+This represents the type 'logically' stored by the markable object. Markable object tries to make an impression on the users that it is internally storing an objectof type `value_type`, which is often the case, but not always.
 
 #### `storage_type`
-represents the type of the sub-object physically stored inside markable object, which is used to store the value of the object as well as the empty-state mark. 
+This represents the type of the sub-object physically stored inside markable object, which is used to store the value of the object as well as the empty-state mark. 
 
 #### `reference_type`
-represents the type returned when the user requests read access to the stored value. Typically, this type is defined as `const value_type&`, however, sometimes when the accessed value is computed on the fly, this type may be defined as `value_type`.
+This represents the type returned when the user requests read access to the stored value. Typically, this type is defined as `const value_type&`, however, sometimes when the accessed value is computed on the fly, this type may be defined as `value_type`.
 
 ## Class template `markable`
 
