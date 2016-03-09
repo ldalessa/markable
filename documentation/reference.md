@@ -43,7 +43,7 @@ namespace ak_toolbox
 {
   namespace markable_ns
   {
-    template <typename MP, typename Tag = default_tag>
+    template <Mark_policy MP, typename Tag = default_tag>
     class markable
     {
       typedef typename MP::value_type     value_type;
