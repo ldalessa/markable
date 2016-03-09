@@ -29,9 +29,9 @@ concept bool Mark_policy = requires()
                     const typename MP::value_type & cv,
                     typename MP::value_type && rv)
   {
-      { MP::access_value(s) } -> typename MP::reference_type;
-      { MP::store_value(cv) } -> typename MP::storage_type;
-      { MP::store_value(std::move(rv)) } -> typename MP::value_type;
+    { MP::access_value(s) }            -> typename MP::reference_type;
+    { MP::store_value(cv) }            -> typename MP::storage_type;
+    { MP::store_value(std::move(rv)) } -> typename MP::value_type;
   };
 };
 ```
