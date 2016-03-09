@@ -106,3 +106,10 @@ namespace ak_toolbox
 *Returns:* `MP::access_value(val_)`.
 
 *Throws:* Whatever `MP::access_value` throws. Also, if `reference_type` is in fact not a reference type, whatever `reference_type`'s move constructor throws.
+
+
+#### `storage_type const& storage_value() const`
+
+*Returns:* `val_`.
+
+*Throws:* Nothing.
