@@ -18,18 +18,22 @@ namespace ak_toolbox
 ## Concept `Mark_policy`
 
 ```c++
-tempalte <typename MP>
+template <typename MP>
 concept bool Mark_policy = requires()
 {
-  typename value_type;
-  typename storage_type;
-  typename reference_type;
-  
-  statics:
-  const value_type& access_value(const storage_type& v) { return v; }
-  const value_type& store_value(const value_type& v) { return v; }
-  value_type&& store_value(value_type&& v) { return std::move(v); }
-}
+  typename MP::value_type;
+  typename MP::storage_type;
+  typename MP::reference_type;
+
+  requires requires(const typename MP::storage_type & s,
+                    const typename MP::value_type & cv,
+                    typename MP::value_type && rv)
+  {
+      { MP::access_value(s) } -> typename MP::reference_type;
+      { MP::store_value(cv) } -> typename MP::storage_type;
+      { MP::store_value(std::move(rv)) } -> typename MP::value_type;
+  };
+};
 ```
 
 ## Class template `markable`
