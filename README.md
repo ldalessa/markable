@@ -10,7 +10,7 @@ It is a C++11 single-header (header-only) library.
 Do you want to store a possibly missing `int`? Can you spare value `-1`? You can use it like this:
 
 ```c++
-using namespace ak_toolbox;
+using namespace ak_toolkit;
 typedef markable<evp_int<int, -1>> opt_int;
 
 opt_int oi;
@@ -27,7 +27,7 @@ Do you want to store a possibly missing `std::string`, where 'missing' != 'empty
 Can you spare some string values that contain a null character inside, like `std::string("\0\0", 2)`? This is how you do it:
 
 ```c++
-struct string_empty_value : ak_toolbox::markable_type<std::string>
+struct string_empty_value : ak_toolkit::markable_type<std::string>
 {
   static std::string empty_value() { 
     return std::string("\0\0", 2);
@@ -37,7 +37,7 @@ struct string_empty_value : ak_toolbox::markable_type<std::string>
   }
 };
 
-typedef ak_toolbox::markable<string_empty_value> opt_str;
+typedef ak_toolkit::markable<string_empty_value> opt_str;
 opt_str os, oE(std::string(""));
 
 assert (!os.has_value());
