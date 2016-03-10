@@ -96,6 +96,22 @@ namespace ak_toolkit
 
 *Effects:* Initializes storage value with expression `MP::marked_value()`. 
 
+*Postcondition:* `!has_value()`.
+
+#### `markable(const value_type& v)`
+
+*Effects:* Initializes storage value with expression `MP::store_value(v)`. 
+
+*Postcondition:* `has_value()`.
+
+*Note:* The semantics are in fact slightly different when `MP`'s an instance of is `markable_pod_storage_type`.
+
+#### `markable(value_type&& v)`
+
+*Effects:* Initializes storage value with expression `MP::store_value(std::move(v))`. 
+
+*Postcondition:* `has_value()`.
+
 #### `reference_type has_value() const`
 
 *Returns:* `!MP::is_marked_value(val_)`.
