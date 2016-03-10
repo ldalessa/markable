@@ -15,7 +15,7 @@
 #include <boost/optional.hpp>
 #endif
 
-using namespace ak_toolbox;
+using namespace ak_toolkit;
 
 template <typename T>
 void ignore(T&&) {}

@@ -44,7 +44,7 @@
 # error UNSUPPORTED COMPILER
 #endif
 
-namespace ak_toolbox {
+namespace ak_toolkit {
 namespace markable_ns {
 
 struct default_tag{};
@@ -380,7 +380,7 @@ using markable_ns::mark_optional;
 using markable_ns::mark_stl_empty;
 using markable_ns::mark_enum;
 
-} // namespace ak_toolbox
+} // namespace ak_toolkit
 
 #undef AK_TOOLBOX_ASSERTED_EXPRESSION
 
