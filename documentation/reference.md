@@ -1,7 +1,7 @@
 # Reference
 
 ```c++
-namespace ak_toolbox
+namespace ak_toolkit
 {
   namespace markable_ns
   {
@@ -65,7 +65,7 @@ Given a value of type `value_type` (possibly marked), returns its representation
 ## Class template `markable`
 
 ```c++
-namespace ak_toolbox
+namespace ak_toolkit
 {
   namespace markable_ns
   {
@@ -91,6 +91,10 @@ namespace ak_toolbox
   }
 }
 ```
+
+#### `markable()`
+
+*Effects:* Initializes storage value with expression `MP::marked_value()`. 
 
 #### `reference_type has_value() const`
 
