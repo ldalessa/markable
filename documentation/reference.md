@@ -104,13 +104,15 @@ namespace ak_toolkit
 
 *Postcondition:* `has_value()`.
 
-*Note:* The semantics are in fact slightly different when `MP`'s an instance of is `markable_pod_storage_type`.
+*Note:* The semantics are in fact slightly different when `MP` is derived from `markable_pod_storage_type_tag`.
 
 #### `markable(value_type&& v)`
 
 *Effects:* Initializes storage value with expression `MP::store_value(std::move(v))`. 
 
 *Postcondition:* `has_value()`.
+
+*Note:* The semantics are in fact slightly different when `MP` is derived from `markable_pod_storage_type_tag`.
 
 #### `reference_type has_value() const`
 
