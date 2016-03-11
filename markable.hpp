@@ -353,10 +353,10 @@ public:
   AK_TOOLBOX_CONSTEXPR markable() AK_TOOLBOX_NOEXCEPT_AS(storage_type(N::marked_value()))
     : super() {}
     
-  AK_TOOLBOX_CONSTEXPR markable(const value_type& v)
+  AK_TOOLBOX_CONSTEXPR explicit markable(const value_type& v)
     : super(v) {}
     
-  AK_TOOLBOX_CONSTEXPR markable(value_type&& v)
+  AK_TOOLBOX_CONSTEXPR explicit markable(value_type&& v)
     : super(std::move(v)) {}
 
   friend void swap(markable& l, markable&r)
