@@ -78,8 +78,13 @@ namespace ak_toolkit
       typedef typename MP::reference_type reference_type;
 
       constexpr markable() noexcept(noexcept(storage_type{MP::marked_value{}}));
-      constexpr markable(const value_type& v);
-      constexpr markable(value_type&& v);
+      constexpr explicit markable(const value_type& v);
+      constexpr explicit markable(value_type&& v);
+      constexpr markable(const markable&) = default;
+      constexpr markable(markable&&) = default;
+      
+      constexpr markable& operator=(const markable&) = default;
+      constexpr markable& operator=(markable&&) = default;
       
       constexpr bool has_value() const;
       constexpr reference_type value() const;
