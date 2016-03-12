@@ -2,6 +2,8 @@
 An alternative to `boost::optional<T>` which does not store an additional `bool` flag,
 but encodes the empty state inside `T` using a special indicated value.
 
+(This library used to be called `compact_optional`, but it was renamed to avoid confusion with `std::experimental::optional`.)
+
 ## installation
 It is a C++11 single-header (header-only) library.
 
