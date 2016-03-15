@@ -19,23 +19,20 @@ namespace ak_toolkit
 
 ```c++
 template <typename MP>
-concept bool Mark_policy = requires()
+concept bool Mark_policy = requires(const typename MP::storage_type & s,
+                                    const typename MP::value_type & cv,
+                                    typename MP::value_type && rv)
 {
   typename MP::value_type;
   typename MP::storage_type;
   typename MP::reference_type;
 
-  requires requires(const typename MP::storage_type & s,
-                    const typename MP::value_type & cv,
-                    typename MP::value_type && rv)
-  {
-    { MP::marked_value() }              -> typename MP::storage_type;
-    { MP::is_marked_value(s) } noexcept -> bool;
+  { MP::marked_value() }              -> typename MP::storage_type;
+  { MP::is_marked_value(s) } noexcept -> bool;
     
-    { MP::access_value(s) }             -> typename MP::reference_type;
-    { MP::store_value(cv) }             -> typename MP::storage_type;
-    { MP::store_value(std::move(rv)) }  -> typename MP::storage_type;
-  };
+  { MP::access_value(s) }             -> typename MP::reference_type;
+  { MP::store_value(cv) }             -> typename MP::storage_type;
+  { MP::store_value(std::move(rv)) }  -> typename MP::storage_type;
 };
 ```
 
