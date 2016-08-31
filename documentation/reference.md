@@ -55,7 +55,7 @@ Returns a marked value encoded in `storage_type`. This will be later used to rep
 Checks if the given value represents a marked value.
 
 #### `{ access_value(s) } -> reference_type`
-*Requires:* `!is_marked_value(s)`.
+*Preconditions:* `!is_marked_value(s)`.
 
 Given a value encoded in `storage_type`, provides access to it through type `reference_type`. Typically, when `reference_type` and `const storage_type&` are same type, this is an identity function.
 
@@ -128,7 +128,7 @@ namespace ak_toolkit
 
 #### `reference_type value() const`
 
-*Requires:* `has_value()`.
+*Preconditions:* `has_value()`.
 
 *Returns:* `MP::access_value(val_)`.
 
