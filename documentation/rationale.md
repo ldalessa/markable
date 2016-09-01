@@ -22,7 +22,7 @@ opt_index index {str.find_first_of("/")};
 
 ## No mutable access to value
 
-(we do not want you to set no-value state through this function) ...
+(we do not want you to set no-value state through this function; and sometimes we only create value on the fly) ...
 
 ## Contextual conversion to bool
 
