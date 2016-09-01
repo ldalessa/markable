@@ -164,10 +164,10 @@ struct markable_type
 ### Class template `mark_int`
 
 ```c++
-template <typename T, T Val>
+template <typename Integral, Integral MVal>
 struct mark_int : markable_type<T>
 {
-  static constexpr T marked_value() noexcept { return Val; }
-  static constexpr bool is_marked_value(T v) { return v == Val; }
+  static constexpr Integral marked_value() noexcept { return MVal; }
+  static constexpr bool is_marked_value(Integral v) { return v == MVal; }
 };
 ```
