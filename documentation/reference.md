@@ -140,3 +140,16 @@ namespace ak_toolkit
 *Returns:* `val_`.
 
 *Throws:* Nothing.
+
+## Predefined mark policies
+
+## Class template `mark_int`
+
+```c++
+template <typename T, T Val>
+struct mark_int : markable_type<T>
+{
+  static constexpr T marked_value() noexcept { return Val; }
+  static constexpr bool is_marked_value(T v) { return v == Val; }
+};
+```
