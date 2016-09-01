@@ -143,7 +143,11 @@ namespace ak_toolkit
 
 ## Class `markable_pod_storage_type_tag`
 
-This is an empty class. Mark policies may use it as a base class in order to control the behavior of the instances of class template `markable`. When a mark policy `MP` derives (directly or indirectly) from `markable_pod_storage_type_tag`, `markable<MP>` does no longer store the value directly as member, but instead uses a raw aligned storage layout-compatible with the value type, and uses in-place construction and destruction to manage the life-time of the stored value. This is necessary to implement mark policies such as `markable_pod_storage_type`.
+This is an empty class. Mark policies may use it as a base class in order to control the behavior of the instances of class template `markable`. When a mark policy `MP` derives (directly or indirectly) from `markable_pod_storage_type_tag`, `markable<MP>` does no longer store the value directly as member, but instead uses a raw aligned storage layout-compatible with the value type, and uses in-place construction and destruction to manage the life-time of the stored value. This is necessary to implement mark policies that use storage techniques such as one in `markable_pod_storage_type`.
+
+## Class template `markable_pod_storage_type`
+
+...
 
 ## Predefined mark policies
 
