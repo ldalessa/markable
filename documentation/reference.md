@@ -143,7 +143,25 @@ namespace ak_toolkit
 
 ## Predefined mark policies
 
-## Class template `mark_int`
+### Class template `markable_type`
+
+This class template provides default definitions form most of the requirements in concept `Mark_policy`. When declaring your own mark policy, you probably want to derive from this class template (although it is not strictly necessary). 
+
+```c++
+template <typename T, typename NT = T, typename CREF = const T&>
+struct markable_type
+{
+  typedef T value_type;
+  typedef NT storage_type;
+  typedef CREF reference_type;
+  
+  static constexpr const value_type& access_value(const storage_type& v) { return v; }
+  static constexpr const value_type& store_value(const value_type& v) { return v; }
+  static constexpr value_type&& store_value(value_type&& v) { return std::move(v); }
+};
+```
+
+### Class template `mark_int`
 
 ```c++
 template <typename T, T Val>
