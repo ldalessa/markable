@@ -20,6 +20,10 @@ using opt_index = marked<mark_int<std::string::size_type, std::string::npos>>;
 opt_index index {str.find_first_of("/")};
 ```
 
+## No mutable access to value
+
+(we do not want you to set no-value state through this function) ...
+
 ## Contextual conversion to bool
 
 ...
