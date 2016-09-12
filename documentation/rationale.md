@@ -4,7 +4,19 @@
 
 ## Why not just 'fix' Boost.Optional?
 
-...
+Except for special cases, `optional` needs to guarantee the following property, which is compromised by the philosophy of `markable`:
+
+```c++
+template <typename T>
+void expectation(std::optional<T> o, T some_T)
+{
+  if (o)          // for any 'initialized' optional
+  {
+    *o = some_T;  // modifying the contained value
+    assert (o);   // must not un-initialize the optional
+  }
+}
+```
 
 ## Constructor taking marked value
 
