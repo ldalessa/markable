@@ -4,7 +4,7 @@
 
 ## Why not just 'fix' Boost.Optional?
 
-Except for special cases, `optional` needs to guarantee the following property, which is compromised by the philosophy of `markable`:
+It has been suggested that rather than adding a new library, this 'optimization' should rather been implemented inside `boost::optional`. This is not possible because the idea behind `markable` would visibly affect the smantics of `optional`. The following guarantee offered by `optional` would no longer hold:
 
 ```c++
 template <typename T>
@@ -17,6 +17,8 @@ void expectation(std::optional<T> o, T some_T)
   }
 }
 ```
+
+Some have suggested that `optional` be extended with a policy type, where `optional<T, default_polict>` behaves lik old `optional<T>` used to, but another policy can enable the 'optimization' at the cost of compromizing the generic interface. But having an explicit specialization that behaves differently than the master template is no better than having two separate class templates.
 
 ## Constructor taking marked value
 
@@ -34,7 +36,22 @@ opt_index index {str.find_first_of("/")};
 
 ## No mutable access to value
 
-(we do not want you to set no-value state through this function; and sometimes we only create value on the fly) ...
+It is impossible to alter the "contained value" throug the access to function `value`:
+
+```c++
+marked<mp_int<int, -1>> oi {1};
+oi.value() = 2; // < compile-time error
+```
+
+This is so for two reasons. First, we do not want to allow silently changing the state of markable object to marked value through `value`. With the assignment being prevented, we could get the following surprising behaviour:
+
+```c++
+marked<mp_int<int, -1>> oi {1};
+oi.value() = (int)some_value; // < suppose it was allowed
+assert (oi.has_value())       // < might fail!
+```
+
+Second, sometimes as in the case of `mp_bool` we do not store any value that we can return a reference to. Instead, we store a three-state `char` value, and we return a temporary `bool` value on the fly, which we return by value rather than by reference.
 
 ## Contextual conversion to bool
 
