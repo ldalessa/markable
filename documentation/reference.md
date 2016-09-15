@@ -141,15 +141,42 @@ namespace ak_toolkit
 
 *Throws:* Nothing.
 
-## Class `markable_pod_storage_type_tag`
+## Mark policy creation tools
+
+The follwoing tools help build custom mark policies.
+
+### Class `markable_pod_storage_type_tag`
 
 This is an empty class. Mark policies may use it as a base class in order to control the behavior of the instances of class template `markable`. When a mark policy `MP` derives (directly or indirectly) from `markable_pod_storage_type_tag`, `markable<MP>` does no longer store the value directly as member, but instead uses a raw aligned storage layout-compatible with the value type, and uses in-place construction and destruction to manage the life-time of the stored value. This is necessary to implement mark policies that use storage techniques such as one in `markable_pod_storage_type`.
 
-## Class template `markable_pod_storage_type`
+### Class template `markable_pod_storage_type`
 
-...
+This class template can be used for creating a mark policy for types where no logical value of `T` can be used for marked value, but there exists a bit-pattern in memory occupied by `T` that never represents a valid value of `T`.
 
-## Predefined mark policies
+```c++
+template <typename T, typename POD_T = std::aligned_storage_t<sizeof(T), alignof(T)>>
+  requires std::is_pod<POD_T>::value
+        && sizeof(T) == sizeof(POD_T)
+        && alignof(T) == alignof(POD_T)
+struct markable_pod_storage_type : markable_pod_storage_type_tag
+{
+  typedef T value_type;
+  typedef POD_T storage_type;
+  typedef const T& reference_type;
+  
+  static const value_type& access_value(const storage_type& s);
+  static const storage_type& store_value(const value_type& v); 
+};
+```
+
+`T` is the type of values we want `markable` to represent. `POD_T` is the type designed to represent the memory occupied by `T`: it has to be a POD, with the same size and alignment as `T`.
+
+#### `const value_type& access_value(const storage_type& s)`
+*Returns:* `reinterpret_cast<const value_type&>(s)`.
+
+#### `const storage_type& store_value(const value_type& v)`
+*Returns:* `return reinterpret_cast<const storage_type&>(v)`.
+
 
 ### Class template `markable_type`
 
@@ -168,6 +195,9 @@ struct markable_type
   static constexpr value_type&& store_value(value_type&& v) { return std::move(v); }
 };
 ```
+## Predefined mark policies
+
+
 
 ### Class template `mark_int`
 
