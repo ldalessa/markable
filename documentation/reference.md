@@ -218,7 +218,8 @@ struct mark_int : markable_type<T>
 
 ```c++
 template <typename FPT>
-  requires std::numeric_limits<FPT>::has_quiet_NaN
+  requires std::is_floating_point<FPT>::value
+        && std::numeric_limits<FPT>::has_quiet_NaN
 struct mark_fp_nan : markable_type<FPT>
 {
   static constexpr FPT marked_value() noexcept { return std::numeric_limits<FPT>::quiet_NaN(); }
