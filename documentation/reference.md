@@ -195,8 +195,8 @@ struct markable_type
   static constexpr value_type&& store_value(value_type&& v) { return std::move(v); }
 };
 ```
-## Predefined mark policies
 
+## Predefined mark policies
 
 
 ### Class template `mark_int`
@@ -207,5 +207,21 @@ struct mark_int : markable_type<T>
 {
   static constexpr Integral marked_value() noexcept { return MVal; }
   static constexpr bool is_marked_value(Integral v) { return v == MVal; }
+};
+```
+
+`Integral` represents the stored type. It can be any type suitable for non-type template parameter.
+
+`EV` is the value the empty value representation.
+
+### Class template `mark_fp_nan`
+
+```c++
+template <typename FPT>
+  requires std::numeric_limits<FPT>::has_quiet_NaN
+struct mark_fp_nan : markable_type<FPT>
+{
+  static constexpr FPT marked_value() noexcept { return std::numeric_limits<FPT>::quiet_NaN(); }
+  static constexpr bool is_marked_value(FPT v) { return v != v; }
 };
 ```
