@@ -292,6 +292,7 @@ struct mark_bool : markable_type<bool, char, bool>
 
 ### Class template `mark_enum`
 
+```c++
 template <typename Enum, std::underlying_type_t<Enum> Val> 
   requires std::is_enum<Enum>::value
 struct mark_enum : markable_pod_storage_type<Enum, std::underlying_type_t<Enum>>
@@ -302,5 +303,6 @@ struct mark_enum : markable_pod_storage_type<Enum, std::underlying_type_t<Enum>>
   static storage_type marked_value() { return Val; }
   static bool is_marked_value(const storage_type& v) { return v == Val; }
 };
+```
 
 `Enum` is required to be an enumeration type. `Val` a value of integral type, `std::underlying_type_t<Enum>` not necessarily from the range designated by `Enum`.
