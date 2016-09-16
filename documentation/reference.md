@@ -256,3 +256,51 @@ struct mark_stl_empty : markable_type<Cont>
 `Cont` is required to be a container in the STL sense. 
 
 The expression inside `noexcept` should be equivalent to `std::is_nothrow_default_constructible<Cont>::value && std::is_nothrow_move_constructible<Cont>::value`.
+
+### Class template `mark_optional`
+
+```c++
+template <typename OT>
+struct mark_optional : markable_type<typename OT::value_type, OT>
+{
+  typedef typename OT::value_type value_type;
+  typedef OT storage_type;
+
+  static OT marked_value() noexcept { return OT{}; }
+  static bool is_marked_value(const OT& v) { return !v; }
+  
+  static const value_type& access_value(const storage_type& v) { return *v; }
+  static storage_type store_value(const value_type& v) { return v; }
+  static storage_type store_value(value_type&& v) { return std::move(v); }
+};
+```
+
+`OT` is required to be either `boost::optional` or `std::experimental::optional` or `std::optional` or a type sufficiently similar to these.
+
+### Class template `mark_bool`
+
+```c++
+struct mark_bool : markable_type<bool, char, bool>
+{
+  static constexpr char marked_value() noexcept { return char(2); }
+  static constexpr bool is_marked_value(char v) { return v == 2; }
+  
+  static constexpr bool access_value(const char& v) { return bool(v); }
+  static constexpr char store_value(const bool& v) { return v; }
+};
+```
+
+### Class template `mark_enum`
+
+template <typename Enum, std::underlying_type_t<Enum> Val> 
+  requires std::is_enum<Enum>::value
+struct mark_enum : markable_pod_storage_type<Enum, std::underlying_type_t<Enum>>
+{
+  typedef markable_pod_storage_type<Enum, std::underlying_type_t<Enum>> base;
+  typedef typename base::storage_type storage_type;
+  
+  static storage_type marked_value() { return Val; }
+  static bool is_marked_value(const storage_type& v) { return v == Val; }
+};
+
+`Enum` is required to be an enumeration type. `Val` a value of integral type, `std::underlying_type_t<Enum>` not necessarily from the range designated by `Enum`.
