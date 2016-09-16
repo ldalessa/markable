@@ -6,9 +6,39 @@ namespace ak_toolkit
   namespace markable_ns
   {
     template <typename MP, typename Tag>
-    class markable;
+      class markable;
     
     void swap(markable & l, markable & r);
+    
+    struct default_tag{};
+
+   template <typename T, typename NT = T, typename CREF = const T&>
+      struct markable_type;
+    
+    template <typename T, T Val>
+      struct mark_int;
+      
+    template <typename FPT>
+      struct mark_fp_nan;
+      
+    template <typename T>
+      struct mark_value_init;
+      
+    template <typename T>
+      struct mark_stl_empty;
+      
+    template <typename OT>
+      struct mark_optional;
+      
+    struct mark_bool;
+    
+    struct markable_pod_storage_type_tag{};
+    
+    template <typename T, typename POD_T = std::aligned_storage_t<sizeof(T), alignof(T)>>
+      struct markable_pod_storage_type;
+      
+    template <typename Enum, std::underlying_type_t<Enum> Val> 
+      struct mark_enum;
   }
 
   using markable_ns::markable;
