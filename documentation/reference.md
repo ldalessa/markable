@@ -12,7 +12,7 @@ namespace ak_toolkit
     
     struct default_tag{};
 
-   template <typename T, typename NT = T, typename CREF = const T&>
+    template <typename T, typename NT = T, typename CREF = const T&>
       struct markable_type;
     
     template <typename T, T Val>
@@ -42,6 +42,15 @@ namespace ak_toolkit
   }
 
   using markable_ns::markable;
+  using markable_ns::markable_type;
+  using markable_ns::markable_pod_storage_type;
+  using markable_ns::mark_bool;
+  using markable_ns::mark_int;
+  using markable_ns::mark_fp_nan;
+  using markable_ns::mark_value_init;
+  using markable_ns::mark_optional;
+  using markable_ns::mark_stl_empty;
+  using markable_ns::mark_enum;
 }
 ```
 
