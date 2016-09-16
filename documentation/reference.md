@@ -226,3 +226,33 @@ struct mark_fp_nan : markable_type<FPT>
   static constexpr bool is_marked_value(FPT v) { return v != v; }
 };
 ```
+
+### Class template `mark_value_init`
+
+```c++
+template <typename T>
+struct mark_value_init : markable_type<T>
+{
+  static constexpr T marked_value() noexcept(see below) { return T{}; }
+  static constexpr bool is_marked_value(const T& v) { return v == T{}; }
+};
+```
+
+`T` is required to be a regular type.
+
+The expression inside `noexcept` should be equivalent to `std::is_nothrow_default_constructible<T>::value && std::is_nothrow_move_constructible<T>::value`.
+
+### Class template `mark_stl_empty`
+
+```c++
+template <typename Cont>
+struct mark_stl_empty : markable_type<Cont>
+{
+  static constexpr Cont marked_value() noexcept(see below) { return Cont{}; }
+  static constexpr bool is_marked_value(const Cont& v) { return v.empty(); }
+};
+```
+
+`Cont` is required to be a container in the STL sense. 
+
+The expression inside `noexcept` should be equivalent to `std::is_nothrow_default_constructible<Cont>::value && std::is_nothrow_move_constructible<Cont>::value`.
