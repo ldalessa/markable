@@ -11,7 +11,7 @@
 
 
 
-#if defined AK_TOOLBOX_USING_BOOST
+#if defined AK_TOOLBOX_USING_BOOST || defined AK_TOOLKIT_USING_BOOST
 #include <boost/optional.hpp>
 #endif
 
