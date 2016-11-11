@@ -20,6 +20,21 @@ void expectation(std::optional<T> o, T some_T)
 
 Some have suggested that `optional` be extended with a policy type, where `optional<T, default_polict>` behaves lik old `optional<T>` used to, but another policy can enable the 'optimization' at the cost of compromizing the generic interface. But having an explicit specialization that behaves differently than the master template is no better than having two separate class templates.
 
+## Why name 'markale'?
+
+The reason is somewhat psychological or "social"; and at the bottom, boils down to the fact that the compromise around `std::optional` in The Standards Committee is very fragile, and decisions around `markable` may affect it.
+
+Clearly, there is some overlap between `optional` (`boost::optional`, `std::optional`) and `markable`. I was explicitly requested to remove any 'optional' from this library's name, in order not to make any suggestion that I am competing with `optional` or that I am offering a superior alternative -- I am not.
+
+You can look at this library from two perspectives:
+
+1. We are giving you a more efficient alternative to `optional<int>`, at the cost of compromising the interface.
+2. It is just an `int` with some magical value, say `-1`, but I am making it more explicit that this `-1` marks a special case.
+
+In this second sense, "mark", "markable", "marked" quite naturally reflect the fact that we are marking one value as special, which is the core idea behind this library.
+
+One could consider other alternatives like "magic_val", but they are not much better, and do not transform into adjectives and verbs that easily ("magic_valued"?).
+
 ## Constructor taking marked value
 
 Should the constructor taking `T` have a precondition that the value is not that indicated as marked?
