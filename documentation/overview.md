@@ -26,7 +26,7 @@ opt_int oN {-1}; // internal value initialized to -1
 There are also three observer functions:
 * `has_value` that checks if the currently stored value is that indicated in the empty-value policy (EVP); 
 * `value` that extracts the stored value, with the precondition that the value is different than the one indicated in (EVP);
-* `unsafe_raw_value` that extracts the value as stored internally, with no precondition.
+* `storage_value` that extracts the value as stored internally, with no precondition.
 
 ```c++
 // continuing the previous example
@@ -38,9 +38,9 @@ assert (o0.value() == 0);
 // oi.value() is UB
 // oN.value() is UB
 
-assert (oi.unsafe_raw_value() == -1);
-assert (o0.unsafe_raw_value() ==  0);
-assert (o0.unsafe_raw_value() == -1);
+assert (oi.storage_value() == -1);
+assert (o0.storage_value() ==  0);
+assert (o0.storage_value() == -1);
 ```
 
 As you can see, there are two ways to set the special empty value: either by default construction, or by providing it explicitly.
