@@ -29,17 +29,18 @@ Do you want to store a possibly missing `std::string`, where 'missing' != 'empty
 Can you spare some string values that contain a null character inside, like `std::string("\0\0", 2)`? This is how you do it:
 
 ```c++
-struct string_empty_value : ak_toolkit::markable_type<std::string>
-{
-  static std::string empty_value() { 
+struct string_marked_value                           // a policy which defines the representaioion of the
+  : ak_toolkit::markable_type<std::string>           // empty std::string value
+{               
+  static std::string empty_value() {                 // create the epty value
     return std::string("\0\0", 2);
   }
-  static bool is_empty_value(const std::string& v) {
+  static bool is_empty_value(const std::string& v) { // test if a given value is empty
     return v.compare(0, v.npos, "\0\0", 2) == 0;
   }
 };
 
-typedef ak_toolkit::markable<string_empty_value> opt_str;
+typedef ak_toolkit::markable<string_marked_value> opt_str;
 opt_str os, oE(std::string(""));
 
 assert (!os.has_value());
