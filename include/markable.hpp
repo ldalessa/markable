@@ -14,28 +14,28 @@
 #include <type_traits>
 
 #if defined AK_TOOLBOX_NO_ARVANCED_CXX11
-#  define AK_TOOLBOX_NOEXCEPT
-#  define AK_TOOLBOX_CONSTEXPR
-#  define AK_TOOLBOX_EXPLICIT_CONV
-#  define AK_TOOLBOX_NOEXCEPT_AS(E)
+#  define AK_TOOLKIT_NOEXCEPT
+#  define AK_TOOLKIT_CONSTEXPR
+#  define AK_TOOLKIT_EXPLICIT_CONV
+#  define AK_TOOLKIT_NOEXCEPT_AS(E)
 #else
-#  define AK_TOOLBOX_NOEXCEPT noexcept 
-#  define AK_TOOLBOX_CONSTEXPR constexpr 
-#  define AK_TOOLBOX_EXPLICIT_CONV explicit 
-#  define AK_TOOLBOX_NOEXCEPT_AS(E) noexcept(noexcept(E))
-#  define AK_TOOLBOX_CONSTEXPR_NOCONST // fix in the future
+#  define AK_TOOLKIT_NOEXCEPT noexcept 
+#  define AK_TOOLKIT_CONSTEXPR constexpr 
+#  define AK_TOOLKIT_EXPLICIT_CONV explicit 
+#  define AK_TOOLKIT_NOEXCEPT_AS(E) noexcept(noexcept(E))
+#  define AK_TOOLKIT_CONSTEXPR_NOCONST // fix in the future
 #endif
 
 #if defined NDEBUG
-# define AK_TOOLBOX_ASSERTED_EXPRESSION(CHECK, EXPR) (EXPR)
+# define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) (EXPR)
 #elif defined __clang__ || defined __GNU_LIBRARY__
-# define AK_TOOLBOX_ASSERTED_EXPRESSION(CHECK, EXPR) ((CHECK) ? (EXPR) : (fail(#CHECK, __FILE__, __LINE__), (EXPR)))
+# define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) ((CHECK) ? (EXPR) : (fail(#CHECK, __FILE__, __LINE__), (EXPR)))
   inline void fail(const char* expr, const char* file, int line)
   {
     __assert(expr, file, line);
   }
 #elif defined __GNUC__
-# define AK_TOOLBOX_ASSERTED_EXPRESSION(CHECK, EXPR) ((CHECK) ? (EXPR) : (fail(#CHECK, __FILE__, __LINE__), (EXPR)))
+# define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) ((CHECK) ? (EXPR) : (fail(#CHECK, __FILE__, __LINE__), (EXPR)))
   inline void fail(const char* expr, const char* file, unsigned line)
   {
     _assert(expr, file, line);
@@ -44,57 +44,62 @@
 # error UNSUPPORTED COMPILER
 #endif
 
+#if defined __cpp_concepts && __cpp_concepts == 201507
+// TODO: will conditionally support concepts
+#endif
+
 namespace ak_toolkit {
 namespace markable_ns {
 
 struct default_tag{};
 
-template <typename T, typename NT = T, typename CREF = const T&>
+template <typename T, typename NT = T, typename CREF = const T&, typename PODT = NT>
 struct markable_type
 {
-  typedef T value_type;
-  typedef NT storage_type;
-  typedef CREF reference_type;
+  typedef T value_type;        // the type we claim we (optionally) store
+  typedef NT storage_type;     // the type we use for storage
+  typedef CREF reference_type; // the type that we return upon "dereference"
+  typedef PODT pod_type;       // the type we use to represent the marked state
   
-  static AK_TOOLBOX_CONSTEXPR const value_type& access_value(const storage_type& v) { return v; }
-  static AK_TOOLBOX_CONSTEXPR const value_type& store_value(const value_type& v) { return v; }
-  static AK_TOOLBOX_CONSTEXPR value_type&& store_value(value_type&& v) { return std::move(v); }
+  static AK_TOOLKIT_CONSTEXPR const value_type& access_value(const storage_type& v) { return v; }
+  static AK_TOOLKIT_CONSTEXPR const value_type& store_value(const value_type& v) { return v; }
+  static AK_TOOLKIT_CONSTEXPR value_type&& store_value(value_type&& v) { return std::move(v); }
 };
 
 template <typename T, T Val>
 struct mark_int : markable_type<T>
 {
-  static AK_TOOLBOX_CONSTEXPR T marked_value() AK_TOOLBOX_NOEXCEPT { return Val; }
-  static AK_TOOLBOX_CONSTEXPR bool is_marked_value(T v) { return v == Val; }
+  static AK_TOOLKIT_CONSTEXPR T marked_value() AK_TOOLKIT_NOEXCEPT { return Val; }
+  static AK_TOOLKIT_CONSTEXPR bool is_marked_value(T v) { return v == Val; }
 };
 
 // for backward compatibility only:
 template <typename T, T Val>
 struct empty_scalar_value : markable_type<T>
 {
-  static AK_TOOLBOX_CONSTEXPR T marked_value() AK_TOOLBOX_NOEXCEPT { return Val; }
-  static AK_TOOLBOX_CONSTEXPR bool is_marked_value(T v) { return v == Val; }
+  static AK_TOOLKIT_CONSTEXPR T marked_value() AK_TOOLKIT_NOEXCEPT { return Val; }
+  static AK_TOOLKIT_CONSTEXPR bool is_marked_value(T v) { return v == Val; }
 };
 
 template <typename FPT>
 struct mark_fp_nan : markable_type<FPT>
 {
-  static AK_TOOLBOX_CONSTEXPR FPT marked_value() AK_TOOLBOX_NOEXCEPT { return std::numeric_limits<FPT>::quiet_NaN(); }
-  static AK_TOOLBOX_CONSTEXPR bool is_marked_value(FPT v) { return v != v; }
+  static AK_TOOLKIT_CONSTEXPR FPT marked_value() AK_TOOLKIT_NOEXCEPT { return std::numeric_limits<FPT>::quiet_NaN(); }
+  static AK_TOOLKIT_CONSTEXPR bool is_marked_value(FPT v) { return v != v; }
 };
 
 template <typename T> // requires Regular<T>
 struct mark_value_init : markable_type<T>
 {
-  static AK_TOOLBOX_CONSTEXPR T marked_value() AK_TOOLBOX_NOEXCEPT_AS(T()) { return T(); }
-  static AK_TOOLBOX_CONSTEXPR bool is_marked_value(const T& v) { return v == T(); }
+  static AK_TOOLKIT_CONSTEXPR T marked_value() AK_TOOLKIT_NOEXCEPT_AS(T()) { return T(); }
+  static AK_TOOLKIT_CONSTEXPR bool is_marked_value(const T& v) { return v == T(); }
 };
 
 template <typename T>
 struct mark_stl_empty : markable_type<T>
 {
-  static AK_TOOLBOX_CONSTEXPR T marked_value() AK_TOOLBOX_NOEXCEPT_AS(T()) { return T(); }
-  static AK_TOOLBOX_CONSTEXPR bool is_marked_value(const T& v) { return v.empty(); }
+  static AK_TOOLKIT_CONSTEXPR T marked_value() AK_TOOLKIT_NOEXCEPT_AS(T()) { return T(); }
+  static AK_TOOLKIT_CONSTEXPR bool is_marked_value(const T& v) { return v.empty(); }
 };
 
 template <typename OT>
@@ -103,7 +108,7 @@ struct mark_optional : markable_type<typename OT::value_type, OT>
   typedef typename OT::value_type value_type;
   typedef OT storage_type;
 
-  static OT marked_value() AK_TOOLBOX_NOEXCEPT { return OT(); }
+  static OT marked_value() AK_TOOLKIT_NOEXCEPT { return OT(); }
   static bool is_marked_value(const OT& v) { return !v; }
   
   static const value_type& access_value(const storage_type& v) { return *v; }
@@ -113,11 +118,11 @@ struct mark_optional : markable_type<typename OT::value_type, OT>
 
 struct mark_bool : markable_type<bool, char, bool>
 {
-  static AK_TOOLBOX_CONSTEXPR char marked_value() AK_TOOLBOX_NOEXCEPT { return char(2); }
-  static AK_TOOLBOX_CONSTEXPR bool is_marked_value(char v) { return v == 2; }
+  static AK_TOOLKIT_CONSTEXPR char marked_value() AK_TOOLKIT_NOEXCEPT { return char(2); }
+  static AK_TOOLKIT_CONSTEXPR bool is_marked_value(char v) { return v == 2; }
   
-  static AK_TOOLBOX_CONSTEXPR bool access_value(const char& v) { return bool(v); }
-  static AK_TOOLBOX_CONSTEXPR char store_value(const bool& v) { return v; }
+  static AK_TOOLKIT_CONSTEXPR bool access_value(const char& v) { return bool(v); }
+  static AK_TOOLKIT_CONSTEXPR char store_value(const bool& v) { return v; }
 };
 
 typedef mark_bool compact_bool;
@@ -182,13 +187,13 @@ struct member_storage
   
   storage_type value_;
   
-  AK_TOOLBOX_CONSTEXPR member_storage() AK_TOOLBOX_NOEXCEPT_AS(storage_type(EVP::marked_value()))
+  AK_TOOLKIT_CONSTEXPR member_storage() AK_TOOLKIT_NOEXCEPT_AS(storage_type(EVP::marked_value()))
     : value_(EVP::marked_value()) {}
     
-  AK_TOOLBOX_CONSTEXPR member_storage(const value_type& v)
+  AK_TOOLKIT_CONSTEXPR member_storage(const value_type& v)
     : value_(EVP::store_value(v)) {}
     
-  AK_TOOLBOX_CONSTEXPR member_storage(value_type&& v)
+  AK_TOOLKIT_CONSTEXPR member_storage(value_type&& v)
     : value_(EVP::store_value(std::move(v))) {}
     
   void swap_impl(member_storage& rhs)
@@ -218,7 +223,7 @@ private:
   const value_type& as_value_type() const { return reinterpret_cast<const value_type&>(value_); }
   
 public:
-  buffer_storage() AK_TOOLBOX_NOEXCEPT_AS(storage_type(EVP::marked_value()))
+  buffer_storage() AK_TOOLKIT_NOEXCEPT_AS(storage_type(EVP::marked_value()))
     : value_(EVP::marked_value()) {}
     
   buffer_storage(const value_type& v) : value_(EVP::marked_value())
@@ -307,6 +312,8 @@ struct storage_destruction
                                     member_storage<T>>::type type;
 };
 
+// makable_base is used to prevent a code bloat. All members that do not depend
+// on tag, are moved to tis base class.
 template <typename N>
 class markable_base : storage_destruction<N>::type
 {
@@ -319,23 +326,23 @@ protected:
   typedef typename N::reference_type reference_type;
   void swap_storages(markable_base& rhs) { as_base().swap_impl(rhs.as_base()); }
   
-  AK_TOOLBOX_CONSTEXPR_NOCONST storage_type& raw_value() { return base::value_; }
+  AK_TOOLKIT_CONSTEXPR_NOCONST storage_type& raw_value() { return base::value_; }
   
 public:
-  AK_TOOLBOX_CONSTEXPR markable_base() AK_TOOLBOX_NOEXCEPT_AS(base())
+  AK_TOOLKIT_CONSTEXPR markable_base() AK_TOOLKIT_NOEXCEPT_AS(base())
     : base() {}
     
-  AK_TOOLBOX_CONSTEXPR markable_base(const value_type& v)
+  AK_TOOLKIT_CONSTEXPR markable_base(const value_type& v)
     : base(v) {}
     
-  AK_TOOLBOX_CONSTEXPR markable_base(value_type&& v)
+  AK_TOOLKIT_CONSTEXPR markable_base(value_type&& v)
     : base(std::move(v)) {}
     
-  AK_TOOLBOX_CONSTEXPR bool has_value() const { return !N::is_marked_value(base::value_); }
+  AK_TOOLKIT_CONSTEXPR bool has_value() const { return !N::is_marked_value(base::value_); }
   
-  AK_TOOLBOX_CONSTEXPR reference_type value() const { return AK_TOOLBOX_ASSERTED_EXPRESSION(has_value(), N::access_value(base::value_)); }
+  AK_TOOLKIT_CONSTEXPR reference_type value() const { return AK_TOOLKIT_ASSERTED_EXPRESSION(has_value(), N::access_value(base::value_)); }
   
-  AK_TOOLBOX_CONSTEXPR storage_type const& storage_value() const { return base::value_; }
+  AK_TOOLKIT_CONSTEXPR storage_type const& storage_value() const { return base::value_; }
 };
 
 } // namespace detail_
@@ -350,13 +357,13 @@ public:
   typedef typename N::storage_type storage_type;
   typedef typename N::reference_type reference_type;
 
-  AK_TOOLBOX_CONSTEXPR markable() AK_TOOLBOX_NOEXCEPT_AS(storage_type(N::marked_value()))
+  AK_TOOLKIT_CONSTEXPR markable() AK_TOOLKIT_NOEXCEPT_AS(storage_type(N::marked_value()))
     : super() {}
     
-  AK_TOOLBOX_CONSTEXPR explicit markable(const value_type& v)
+  AK_TOOLKIT_CONSTEXPR explicit markable(const value_type& v)
     : super(v) {}
     
-  AK_TOOLBOX_CONSTEXPR explicit markable(value_type&& v)
+  AK_TOOLKIT_CONSTEXPR explicit markable(value_type&& v)
     : super(std::move(v)) {}
 
   friend void swap(markable& l, markable&r)
@@ -382,6 +389,6 @@ using markable_ns::mark_enum;
 
 } // namespace ak_toolkit
 
-#undef AK_TOOLBOX_ASSERTED_EXPRESSION
+#undef AK_TOOLKIT_ASSERTED_EXPRESSION
 
 #endif //AK_TOOLBOX_COMPACT_OPTIONAL_HEADER_GUARD_
