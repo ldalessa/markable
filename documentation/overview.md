@@ -251,7 +251,7 @@ This class has an intuitive invariant: first date in interval, cannot be greater
 What we can do, is to provide another, non-POD type for representing both marked value and any value of `DateInterval`:
 
 ```c++
-using WeakDateInterval std::pair<Date, Date>;
+using WeakDateInterval = std::pair<Date, Date>;
 ```
 
 `WeakDateInterval` is a "dual" type to "DateInterval", with the same memory layout (not only the `sizeof()` part), but weaker invariant. Now, we can use the dual storage, that creates and destroys interchangeably `DateInterval` and `WeakDateInterval` as needed. This is how you assemble all the these things together:
