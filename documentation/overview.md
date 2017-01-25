@@ -232,8 +232,6 @@ using Date = boost::gregorian::date;
 
 class DateInterval
 {
-
-  
   Date _first;
   Date _last;
   
