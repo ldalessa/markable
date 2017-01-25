@@ -228,6 +228,134 @@ void test_mark_stl_empty()
   }
 }
 
+
+class Date
+{
+  int _d;
+  
+public:
+  bool invariant() const { return _d >= 0 && _d <= 100000; }
+  explicit Date (int d) : _d(d) { assert(invariant()); }
+  int as_int() const { return _d; }
+  friend bool operator< (Date const& l, Date const& r) { return l._d <  r._d; }
+  friend bool operator==(Date const& l, Date const& r) { return l._d == r._d; }
+};
+
+int DateInterval_value_ctor_calls_count = 0;
+int DateInterval_copy_ctor_calls_count = 0;
+int DateInterval_move_ctor_calls_count = 0;
+int DateInterval_dtor_calls_count = 0;
+
+class DateInterval
+{
+  Date _first;
+  Date _last;
+  
+public:
+  bool invariant() const { return !(_last < _first); }
+  explicit DateInterval(Date const& f, Date const& l) : _first(f), _last(l) { assert (invariant()); ++DateInterval_value_ctor_calls_count; }
+  DateInterval(const DateInterval& r) : _first(r._first), _last(r._last) { assert (invariant()); ++DateInterval_copy_ctor_calls_count; }
+  DateInterval(DateInterval&& r) : _first(r._first), _last(r._last) { assert (invariant()); ++DateInterval_move_ctor_calls_count; }
+  ~DateInterval() { assert (invariant()); ++DateInterval_dtor_calls_count; }
+  
+  DateInterval& operator=(const DateInterval& r) { assert (invariant()); _first = r._first; _last = r._last; assert (invariant()); return *this; }
+  DateInterval& operator=(DateInterval&& r) { assert (invariant()); _first = r._first; _last = r._last; assert (invariant()); return *this; }
+  
+  Date const& first() const { return _first; }
+  Date const& last() const { return _last; }
+  
+  friend bool operator==(DateInterval const& l, DateInterval const& r) { return l.first() == r.first() && l.last() == r.last(); }
+};
+
+void reset_Interval_count ()
+{
+  DateInterval_value_ctor_calls_count = 0;
+  DateInterval_copy_ctor_calls_count = 0;
+  DateInterval_move_ctor_calls_count = 0;
+  DateInterval_dtor_calls_count = 0;
+}
+
+bool count_Interval_value_copy_move_dtror(int v, int c, int m, int d)
+{
+  return DateInterval_value_ctor_calls_count == v
+      && DateInterval_copy_ctor_calls_count == c
+      && DateInterval_move_ctor_calls_count == m
+      && DateInterval_dtor_calls_count == d;
+};
+
+struct mark_interval : markable_dual_storage_type< DateInterval, std::pair<Date, Date> >
+{
+  static storage_type marked_value() { return {Date{2}, Date{1}}; }
+  static bool is_marked_value(const storage_type& v) { return v.second < v.first; }
+};
+
+void test_dual_storage_with_tuple_default_and_move_ctor()
+{
+  reset_Interval_count();
+  {
+    typedef markable<mark_interval> opt_interval;
+    opt_interval o1;
+    assert (!o1.has_value());
+    assert (count_Interval_value_copy_move_dtror(0, 0, 0, 0));
+    
+    opt_interval o2 {DateInterval{Date{1}, Date{2}}};
+    assert (o2.has_value());
+    assert (o2.value().first() == Date{1});
+    assert (o2.value().last()  == Date{2});
+    assert (count_Interval_value_copy_move_dtror(1, 0, 1, 1));
+  }
+  assert (count_Interval_value_copy_move_dtror(1, 0, 1, 2));
+}
+
+void test_dual_storage_with_tuple_copy_ctor()
+{
+  reset_Interval_count();
+  {
+    typedef markable<mark_interval> opt_interval;
+    DateInterval i12 {Date{1}, Date{2}};
+    assert (count_Interval_value_copy_move_dtror(1, 0, 0, 0));
+    
+    opt_interval o2 {i12};
+    assert (o2.has_value());
+    assert (o2.value() == i12);
+    assert (count_Interval_value_copy_move_dtror(1, 1, 0, 0));
+  }
+  assert (count_Interval_value_copy_move_dtror(1, 1, 0, 2));
+}
+
+void test_dual_storage_with_tuple_init_state_mutation()
+{
+  reset_Interval_count();
+  {
+    typedef markable<mark_interval> opt_interval;
+    DateInterval i12 {Date{1}, Date{2}};
+    assert (count_Interval_value_copy_move_dtror(1, 0, 0, 0));
+    
+    opt_interval o1 {}, o2 {i12};
+    assert (count_Interval_value_copy_move_dtror(1, 1, 0, 0));
+    
+    assert (!o1.has_value());
+    assert (o2.has_value());
+    
+    o1 = opt_interval{i12};
+    assert (count_Interval_value_copy_move_dtror(1, 2, 1, 1));
+    o2 = {};
+    assert (count_Interval_value_copy_move_dtror(1, 2, 1, 2));
+    
+    assert (o1.has_value());
+    assert (o1.value() == i12);
+    assert (!o2.has_value());
+    
+    swap (o1, o2);
+    assert (count_Interval_value_copy_move_dtror(1, 2, 2, 3));
+    
+    assert (!o1.has_value());
+    assert (o2.has_value());
+    assert (o2.value() == i12);
+  }
+  assert (count_Interval_value_copy_move_dtror(1, 2, 2, 5));
+}
+
 class minutes_since_midnight
 {
   int minutes_;
@@ -365,4 +493,8 @@ int main()
   test_optional_as_storage();
 #endif
   test_mark_enum();
+  
+  test_dual_storage_with_tuple_default_and_move_ctor();
+  test_dual_storage_with_tuple_copy_ctor();
+  test_dual_storage_with_tuple_init_state_mutation();
 }

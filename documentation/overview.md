@@ -223,6 +223,58 @@ struct mark_minutes : markable_pod_storage_type<minutes_since_midnight, int>
 
 The first argument is the type we want to represent; the second type (`int`) is the POD type, of the same size and alignment as `T` (the first argument). If it is not provided, the implementation uses `std::aligned_storage_t<sizeof(T), alignof(T)>`. the two functions `marked_value` and `is_marked_value` describe the empty value on the POD type, where no invariant is enforced.
 
+### Using 'dual' storage for empty value
+
+Sometimes POD storage does not suffice. Consider the following example. We want to store a date interval, determined by the first and the last date. For representin dates, we use `boost::gregorian::date`, for the interval, the following class:
+
+```c++
+using Date = boost::gregorian::date;
+
+class DateInterval
+{
+
+  
+  Date _first;
+  Date _last;
+  
+public:
+  bool invariant() const { return _first <= _last; }
+  
+  explicit DateInterval(const Date& f, const Date& l)
+    : _first (f), _last(l)
+    {
+      assert (invariant());
+    }
+}
+```
+
+This class has an intuitive invariant: first date in interval, cannot be greater than the last. This also suggests how we might represent the marked value: by making `_first` greater than `last`. However, POD storage cannot be used here, because `boost::gregorian::date` is a third party library, and we do not know its memory layout. And even if we knew it, it might change with the newer release of the library. Also, `boost::gregorian::date` is not a POD: it has its own invariants, and we want to respect them. 
+
+What we can do, is to provide another, non-POD type for representing both marked value and any value of `DateInterval`:
+
+```c++
+using WeakDateInterval std::pair<Date, Date>;
+```
+
+`WeakDateInterval` is a "dual" type to "DateInterval", with the same memory layout (not only the `sizeof()` part), but weaker invariant. Now, we can use the dual storage, that creates and destroys interchangeably `DateInterval` and `WeakDateInterval` as needed. This is how you assemble all the these things together:
+
+```c++
+struct mark_interval : markable_dual_storage_type<DateInterval, WeakDateInterval>
+{
+  static storage_type marked_value() { return {Date{2017, Feb, 2}, Date{2016, Jan, 1}}; }
+  static bool is_marked_value(const storage_type& v) { return v.second < v.first; }
+};
+
+using opt_interval = markable<mark_interval>;
+```
+
+However, there are two gotchas with using dual storage.
+
+1. Types `T` and `DualT` passed to `markable_dual_storage_type` need to preserve certain relation: you should be able to observe the state of `T` by accessing members of `DualT`. In other words, sometimes `is_marked_value` will be invoked upon an object of type `T` `reinterpret_cast`-ed to `const DualT&`, and this must workcorrectly.
+
+2. If policy function `marked_value` or `DualT`'s move assignment throws an exception during the unsuccessful assignment of `markable<>` object, the behavior is undefined; or in compilers taht support `noexcept`, function `std::terminate()` is called. The library does not validate it statically, so make sure constructors of `DualT` do not throw (or accept the consequences).
+
+
 ## Type-altering tag
 
 It is possible to pass a second type parameter to class template `markable`.

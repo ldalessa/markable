@@ -180,6 +180,10 @@ namespace ak_toolkit
 
 *Throws:* Nothing.
 
+### Exception safety
+
+If an exception is thrown during the assignment, the state of `*this` depends on the exception safety guarantees of `storage_type`. If `storage_type` offers a weak guarantee, the corresponding `markable<>` type also offers only a weak guarantee. In particular, the value of `has_value()` may change.
+
 ## Mark policy creation tools
 
 The follwoing tools help build custom mark policies.

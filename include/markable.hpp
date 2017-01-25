@@ -53,13 +53,13 @@ namespace markable_ns {
 
 struct default_tag{};
 
-template <typename T, typename NT = T, typename CREF = const T&, typename PODT = NT>
+template <typename T, typename NT = T, typename CREF = const T&/*, typename PODT = NT*/>
 struct markable_type
 {
   typedef T value_type;        // the type we claim we (optionally) store
   typedef NT storage_type;     // the type we use for storage
   typedef CREF reference_type; // the type that we return upon "dereference"
-  typedef PODT pod_type;       // the type we use to represent the marked state
+  //typedef PODT pod_type;       // the type we use to represent the marked state
   
   static AK_TOOLKIT_CONSTEXPR const value_type& access_value(const storage_type& v) { return v; }
   static AK_TOOLKIT_CONSTEXPR const value_type& store_value(const value_type& v) { return v; }
@@ -129,6 +129,7 @@ typedef mark_bool compact_bool;
 
 
 struct markable_pod_storage_type_tag{};
+struct markable_dual_storage_type_tag{};
 
 #ifndef AK_TOOLBOX_NO_ARVANCED_CXX11
 template <typename T, typename POD_T = typename std::aligned_storage<sizeof(T), alignof(T)>::type>
@@ -140,6 +141,23 @@ struct markable_pod_storage_type : markable_pod_storage_type_tag
 {
   static_assert(sizeof(T) == sizeof(POD_T), "pod storage for T has to have the same size and alignment as T");
   static_assert(std::is_pod<POD_T>::value, "second argument must be a POD type");
+#ifndef AK_TOOLBOX_NO_ARVANCED_CXX11
+  static_assert(alignof(T) == alignof(POD_T), "pod storage for T has to have the same alignment as T");
+#endif // AK_TOOLBOX_NO_ARVANCED_CXX11
+
+  typedef T value_type;
+  typedef POD_T storage_type;
+  typedef const T& reference_type;
+  
+  static const value_type& access_value(const storage_type& s) { return reinterpret_cast<const value_type&>(s); }
+  static const storage_type& store_value(const value_type& v) { return reinterpret_cast<const storage_type&>(v); }  
+};
+
+
+template <typename T, typename POD_T>
+struct markable_dual_storage_type : markable_dual_storage_type_tag
+{
+  static_assert(sizeof(T) == sizeof(POD_T), "pod storage for T has to have the same size and alignment as T");
 #ifndef AK_TOOLBOX_NO_ARVANCED_CXX11
   static_assert(alignof(T) == alignof(POD_T), "pod storage for T has to have the same alignment as T");
 #endif // AK_TOOLBOX_NO_ARVANCED_CXX11
@@ -201,6 +219,9 @@ struct member_storage
     using namespace std;
     swap(value_, rhs.value_);
   }
+  
+  storage_type& storage() { return value_; }
+  const storage_type& storage() const { return value_; }
 };
 
 template <typename EVP>
@@ -210,9 +231,8 @@ struct buffer_storage
   typedef typename EVP::storage_type storage_type;
   typedef typename EVP::reference_type reference_type;
   
-  storage_type value_;
-  
 private:
+  storage_type value_;
   void* address() { return static_cast<void*>(std::addressof(value_)); }
   void construct(const value_type& v) { ::new (address()) value_type(v); }
   void construct(value_type&& v) { ::new (address()) value_type(std::move(v)); }
@@ -223,6 +243,10 @@ private:
   const value_type& as_value_type() const { return reinterpret_cast<const value_type&>(value_); }
   
 public:
+
+  storage_type& storage() { return value_; }
+  const storage_type& storage() const { return value_; }
+  
   buffer_storage() AK_TOOLKIT_NOEXCEPT_AS(storage_type(EVP::marked_value()))
     : value_(EVP::marked_value()) {}
     
@@ -303,21 +327,193 @@ public:
   // TODO: implement moves and copies, swap, dtor
 };
 
-template <typename T>
-struct storage_destruction
-{
+struct _init_value_tag {};
+struct _init_storage_tag {};
+struct _init_nothing_tag {};
 
-  typedef typename std::conditional<std::is_base_of<markable_pod_storage_type_tag, T>::value,
-                                    buffer_storage<T>, 
-                                    member_storage<T>>::type type;
+template <typename EVP>
+union dual_storage_union
+{
+  typedef typename EVP::value_type value_type;
+  typedef typename EVP::storage_type storage_type;
+  
+  char         _nothing;
+  value_type   _value;
+  storage_type _marking;
+  
+  constexpr explicit dual_storage_union(_init_nothing_tag) AK_TOOLKIT_NOEXCEPT
+    : _nothing() {}
+    
+  constexpr explicit dual_storage_union(_init_storage_tag) AK_TOOLKIT_NOEXCEPT_AS(storage_type(EVP::marked_value()))
+    : _marking(EVP::marked_value()) {}
+    
+  constexpr explicit dual_storage_union(value_type && v) AK_TOOLKIT_NOEXCEPT_AS(value_type(std::move(v)))
+    : _value(std::move(v)) {}
+    
+  constexpr explicit dual_storage_union(const value_type& v) AK_TOOLKIT_NOEXCEPT_AS(value_type(std::move(v)))
+    : _value(v) {}
+    
+  ~dual_storage_union() {/* nothing here; will be properly destroyed by the owner */}
+};
+  
+template <typename EVP>
+struct dual_storage
+{
+  typedef typename EVP::value_type value_type;
+  typedef typename EVP::storage_type storage_type;
+  typedef typename EVP::reference_type reference_type;
+  
+  dual_storage_union<EVP> value_;
+  
+private:
+  void* address() { return static_cast<void*>(std::addressof(value_)); }
+  void construct_value(const value_type& v) { ::new (address()) value_type(v); }
+  void construct_value(value_type&& v) { ::new (address()) value_type(std::move(v)); }
+  
+  void change_to_value(const value_type& v)
+    try {
+      destroy_storage();
+      construct_value(v);
+    }
+    catch (...)
+    { // now, neither value nor no-value. We have to try to assign no-value
+      construct_storage_checked();
+      throw;
+    }
+    
+  void change_to_value(value_type&& v)
+    try {
+      destroy_storage();
+      construct_value(std::move(v));
+    }
+    catch (...)
+    { // now, neither value nor no-value. We have to try to assign no-value
+      construct_storage_checked();
+      throw;
+    }
+  
+  void construct_storage() { ::new (address()) storage_type(EVP::marked_value()); } 
+  void construct_storage_checked() AK_TOOLKIT_NOEXCEPT { construct_storage(); }  // std::terminate() if EVP::marked_value() throws
+  
+  void destroy_value() AK_TOOLKIT_NOEXCEPT { as_value_type().value_type::~value_type(); }
+  void destroy_storage() AK_TOOLKIT_NOEXCEPT { storage().storage_type::~storage_type(); }
+  void change_to_storage() AK_TOOLKIT_NOEXCEPT { destroy_value(); construct_storage(); } // std::terminate() if EVP::marked_value() throws
+  bool has_value() const { return !EVP::is_marked_value(storage()); }
+  value_type& as_value_type() { return reinterpret_cast<value_type&>(value_); }
+  const value_type& as_value_type() const { return reinterpret_cast<const value_type&>(value_); }
+  
+public:
+  storage_type& storage() { return reinterpret_cast<storage_type&>(value_); }
+  const storage_type& storage() const { return reinterpret_cast<const storage_type&>(value_); }
+  
+  constexpr dual_storage() AK_TOOLKIT_NOEXCEPT_AS(dual_storage_union<EVP>(_init_storage_tag{}))
+    : value_(_init_storage_tag{}) {}
+    
+  constexpr explicit dual_storage(const value_type& v) AK_TOOLKIT_NOEXCEPT_AS(dual_storage_union<EVP>(v))
+    : value_(v) {}
+    
+  constexpr explicit dual_storage(value_type&& v) AK_TOOLKIT_NOEXCEPT_AS(dual_storage_union<EVP>(std::move(v)))
+    : value_(std::move(v)) {}
+    
+  dual_storage(const dual_storage& rhs) // TODO: add noexcept
+    : value_(_init_nothing_tag{})
+    {
+      if (rhs.has_value())
+        construct_value(rhs.as_value_type());
+      else
+        construct_storage();
+    }
+    
+  dual_storage(dual_storage&& rhs) // TODO: add noexcept
+    : value_(_init_nothing_tag{})
+    {
+      if (rhs.has_value())
+        construct_value(std::move(rhs.as_value_type()));
+      else
+        construct_storage();
+    }
+    
+  void operator=(const dual_storage& rhs)
+    {
+      if (has_value() && rhs.has_value())
+      {
+        as_value_type() = rhs.as_value_type();
+      }
+      else if (has_value() && !rhs.has_value())
+      {
+        change_to_storage();
+      }
+      else if (!has_value() && rhs.has_value())
+      {
+        change_to_value(rhs.as_value_type());
+      }
+    }
+    
+  void operator=(dual_storage&& rhs) // TODO: add noexcept
+    {
+      if (has_value() && rhs.has_value())
+      {
+        as_value_type() = std::move(rhs.as_value_type());
+      }
+      else if (has_value() && !rhs.has_value())
+      {
+        change_to_storage();
+      }
+      else if (!has_value() && rhs.has_value())
+      {
+        change_to_value(std::move(rhs.as_value_type()));
+      }
+    }
+    
+  void swap_impl(dual_storage& rhs)
+  {
+    using namespace std;
+    if (has_value() && rhs.has_value())
+    {
+      swap(as_value_type(), rhs.as_value_type());
+    }
+    else if (has_value() && !rhs.has_value())
+    {
+      rhs.change_to_value(std::move(as_value_type()));
+      change_to_storage();
+    }
+    else if (!has_value() && rhs.has_value())
+    {
+      change_to_value(std::move(rhs.as_value_type()));
+      rhs.change_to_storage();
+    }
+  }
+    
+  ~dual_storage()
+  {
+    if (has_value())
+      destroy_value();
+    else
+      destroy_storage();
+  }
+};
+
+template <typename T>
+struct select_storage_policy
+{
+  typedef typename std::conditional<
+                     std::is_base_of<markable_pod_storage_type_tag, T>::value,
+                     buffer_storage<T>, 
+                     typename std::conditional<
+                       std::is_base_of<markable_dual_storage_type_tag, T>::value,
+                       dual_storage<T>,
+                       member_storage<T> 
+                     >::type
+                                    
+                   >::type type;
 };
 
 // makable_base is used to prevent a code bloat. All members that do not depend
 // on tag, are moved to tis base class.
 template <typename N>
-class markable_base : storage_destruction<N>::type
+class markable_base : select_storage_policy<N>::type
 {
-  typedef typename storage_destruction<N>::type base;
+  typedef typename select_storage_policy<N>::type base;
   base& as_base() { return static_cast<base&>(*this); }
   
 protected:
@@ -326,7 +522,7 @@ protected:
   typedef typename N::reference_type reference_type;
   void swap_storages(markable_base& rhs) { as_base().swap_impl(rhs.as_base()); }
   
-  AK_TOOLKIT_CONSTEXPR_NOCONST storage_type& raw_value() { return base::value_; }
+  AK_TOOLKIT_CONSTEXPR_NOCONST storage_type& raw_value() { return base::storage(); }
   
 public:
   AK_TOOLKIT_CONSTEXPR markable_base() AK_TOOLKIT_NOEXCEPT_AS(base())
@@ -338,11 +534,11 @@ public:
   AK_TOOLKIT_CONSTEXPR markable_base(value_type&& v)
     : base(std::move(v)) {}
     
-  AK_TOOLKIT_CONSTEXPR bool has_value() const { return !N::is_marked_value(base::value_); }
+  AK_TOOLKIT_CONSTEXPR bool has_value() const { return !N::is_marked_value(base::storage()); }
   
-  AK_TOOLKIT_CONSTEXPR reference_type value() const { return AK_TOOLKIT_ASSERTED_EXPRESSION(has_value(), N::access_value(base::value_)); }
+  AK_TOOLKIT_CONSTEXPR reference_type value() const { return AK_TOOLKIT_ASSERTED_EXPRESSION(has_value(), N::access_value(base::storage())); }
   
-  AK_TOOLKIT_CONSTEXPR storage_type const& storage_value() const { return base::value_; }
+  AK_TOOLKIT_CONSTEXPR storage_type const& storage_value() const { return base::storage(); }
 };
 
 } // namespace detail_
@@ -378,6 +574,7 @@ using markable_ns::markable;
 using markable_ns::empty_scalar_value;
 using markable_ns::markable_type;
 using markable_ns::markable_pod_storage_type;
+using markable_ns::markable_dual_storage_type;
 using markable_ns::compact_bool;
 using markable_ns::mark_bool;
 using markable_ns::mark_int;
