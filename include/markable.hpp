@@ -131,12 +131,7 @@ typedef mark_bool compact_bool;
 struct markable_pod_storage_type_tag{};
 struct markable_dual_storage_type_tag{};
 
-#ifndef AK_TOOLBOX_NO_ARVANCED_CXX11
-template <typename T, typename POD_T = typename std::aligned_storage<sizeof(T), alignof(T)>::type>
-#else
 template <typename T, typename POD_T>
-#endif // AK_TOOLBOX_NO_ARVANCED_CXX11
-
 struct markable_pod_storage_type : markable_pod_storage_type_tag
 {
   static_assert(sizeof(T) == sizeof(POD_T), "pod storage for T has to have the same size and alignment as T");
