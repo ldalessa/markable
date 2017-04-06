@@ -197,10 +197,11 @@ This is an empty class. Mark policies may use it as a base class in order to con
 This class template can be used for creating a mark policy for types where no logical value of `T` can be used for marked value, but there exists a bit-pattern in memory occupied by `T` that never represents a valid value of `T`.
 
 ```c++
-template <typename T, typename POD_T = std::aligned_storage_t<sizeof(T), alignof(T)>>
+template <typename T, typename POD_T>
   requires std::is_pod<POD_T>::value
         && sizeof(T) == sizeof(POD_T)
         && alignof(T) == alignof(POD_T)
+        && std::is_standrd_layout<T>::value
 struct markable_pod_storage_type : markable_pod_storage_type_tag
 {
   typedef T value_type;
@@ -213,6 +214,8 @@ struct markable_pod_storage_type : markable_pod_storage_type_tag
 ```
 
 `T` is the type of values we want `markable` to represent. `POD_T` is the type designed to represent the memory occupied by `T`: it has to be a POD, with the same size and alignment as `T`.
+
+*Requires:* `T~` and `POD_T` are pointer-interchangable.
 
 #### `const value_type& access_value(const storage_type& s)`
 *Returns:* `reinterpret_cast<const value_type&>(s)`.
