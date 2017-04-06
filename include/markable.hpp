@@ -141,6 +141,7 @@ struct markable_pod_storage_type : markable_pod_storage_type_tag
 {
   static_assert(sizeof(T) == sizeof(POD_T), "pod storage for T has to have the same size and alignment as T");
   static_assert(std::is_pod<POD_T>::value, "second argument must be a POD type");
+  static_assert(std::is_standard_layout<T>::value, "T must be a Standard Layout type");
 #ifndef AK_TOOLBOX_NO_ARVANCED_CXX11
   static_assert(alignof(T) == alignof(POD_T), "pod storage for T has to have the same alignment as T");
 #endif // AK_TOOLBOX_NO_ARVANCED_CXX11
@@ -154,16 +155,17 @@ struct markable_pod_storage_type : markable_pod_storage_type_tag
 };
 
 
-template <typename T, typename POD_T>
+template <typename T, typename DUAL_T>
 struct markable_dual_storage_type : markable_dual_storage_type_tag
 {
-  static_assert(sizeof(T) == sizeof(POD_T), "pod storage for T has to have the same size and alignment as T");
+  static_assert(sizeof(T) == sizeof(DUAL_T), "dual storage for T has to have the same size and alignment as T");
+  static_assert(std::is_standard_layout<T>::value, "T must be a Standard Layout type");
 #ifndef AK_TOOLBOX_NO_ARVANCED_CXX11
-  static_assert(alignof(T) == alignof(POD_T), "pod storage for T has to have the same alignment as T");
+  static_assert(alignof(T) == alignof(DUAL_T), "dual storage for T has to have the same alignment as T");
 #endif // AK_TOOLBOX_NO_ARVANCED_CXX11
 
   typedef T value_type;
-  typedef POD_T storage_type;
+  typedef DUAL_T storage_type;
   typedef const T& reference_type;
   
   static const value_type& access_value(const storage_type& s) { return reinterpret_cast<const value_type&>(s); }
