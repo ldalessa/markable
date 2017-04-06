@@ -221,10 +221,13 @@ struct mark_minutes : markable_pod_storage_type<minutes_since_midnight, int>
 };
 ```
 
-The first argument is the type we want to represent; the second type (`int`) is the POD type, of the same size and alignment as `T` (the first argument). If it is not provided, the implementation uses `std::aligned_storage_t<sizeof(T), alignof(T)>`. the two functions `marked_value` and `is_marked_value` describe the empty value on the POD type, where no invariant is enforced.
+The first argument is the type we want to represent; the second type (`int`) is the POD type, pointer-interconvertible with `T` (the first argument). the two functions `marked_value` and `is_marked_value` describe the empty value on the POD type, where no invariant is enforced.
+
+WARNING: you have to make sure that the two parameters are pointer-interconvertibe: otherwise you are risking an *undefined behavior*.
 
 ### Using 'dual' storage for empty value
 
+WARNING: this feature uses `reinterpret_cast`s and has not yet been determined to be UB-safe.
 Sometimes POD storage does not suffice. Consider the following example. We want to store a date interval, determined by the first and the last date. For representin dates, we use `boost::gregorian::date`, for the interval, the following class:
 
 ```c++
