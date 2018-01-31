@@ -40,7 +40,7 @@ assert (o0.value() == 0);
 
 assert (oi.storage_value() == -1);
 assert (o0.storage_value() ==  0);
-assert (o0.storage_value() == -1);
+assert (oN.storage_value() == -1);
 ```
 
 As you can see, there are two ways to set the special empty value: either by default construction, or by providing it explicitly.
