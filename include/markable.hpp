@@ -28,20 +28,8 @@
 
 #if defined NDEBUG
 # define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) (EXPR)
-#elif defined __clang__ || defined __GNU_LIBRARY__
-# define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) ((CHECK) ? (EXPR) : (fail(#CHECK, __FILE__, __LINE__), (EXPR)))
-  inline void fail(const char* expr, const char* file, int line)
-  {
-    __assert(expr, file, line);
-  }
-#elif defined __GNUC__
-# define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) ((CHECK) ? (EXPR) : (fail(#CHECK, __FILE__, __LINE__), (EXPR)))
-  inline void fail(const char* expr, const char* file, unsigned line)
-  {
-    _assert(expr, file, line);
-  }
 #else
-# error UNSUPPORTED COMPILER
+# define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) ((CHECK) ? (EXPR) : ([]{assert(!#CHECK);}(), (EXPR)))
 #endif
 
 #if defined __cpp_concepts && __cpp_concepts == 201507
