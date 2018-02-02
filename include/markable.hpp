@@ -26,10 +26,18 @@
 #  define AK_TOOLKIT_CONSTEXPR_NOCONST // fix in the future
 #endif
 
+#if defined __GNUC__
+# define AK_TOOLKIT_LIKELY(EXPR)  __builtin_expect(!!(EXPR), 1)
+#else
+# define AK_TOOLKIT_LIKELY(EXPR)  (!!(EXPR))
+#endif
+
 #if defined NDEBUG
 # define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) (EXPR)
+# define AK_TOOLKIT_ASSERT(EXPR) void(0)
 #else
 # define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) ((CHECK) ? (EXPR) : ([]{assert(!#CHECK);}(), (EXPR)))
+# define AK_TOOLKIT_ASSERT(EXPR) ( AK_TOOLKIT_LIKELY(EXPR) ?  void(0) : []{assert(!#EXPR);}() )
 #endif
 
 #if defined __cpp_concepts && __cpp_concepts == 201507
@@ -54,9 +62,24 @@ struct markable_type
   static AK_TOOLKIT_CONSTEXPR value_type&& store_value(value_type&& v) { return std::move(v); }
 };
 
-template <typename T, T Val>
-struct mark_int : markable_type<T>
+template <typename T, typename NT = T, typename CREF = const T&, typename REPT = NT>
+struct basic_storage_policy
 {
+  typedef T value_type;             // the type we claim we (optionally) store
+  typedef NT storage_type;          // the type we use for storage
+  typedef CREF reference_type;      // the type that we return upon "dereference"
+  typedef REPT representation_type; // the type we use to represent the marked state
+  
+  static AK_TOOLKIT_CONSTEXPR reference_type access_value(const storage_type& v) { return reference_type(v); }
+  static AK_TOOLKIT_CONSTEXPR const representation_type& representation(const storage_type& v) { return v; }
+  static AK_TOOLKIT_CONSTEXPR const value_type& store_value(const value_type& v) { return v; }
+  static AK_TOOLKIT_CONSTEXPR value_type&& store_value(value_type&& v) { return std::move(v); }
+};
+
+template <typename T, T Val>
+struct mark_int
+{
+  typedef T representation_type;
   static AK_TOOLKIT_CONSTEXPR T marked_value() AK_TOOLKIT_NOEXCEPT { return Val; }
   static AK_TOOLKIT_CONSTEXPR bool is_marked_value(T v) { return v == Val; }
 };
@@ -70,48 +93,62 @@ struct empty_scalar_value : markable_type<T>
 };
 
 template <typename FPT>
-struct mark_fp_nan : markable_type<FPT>
+struct mark_fp_nan
 {
+  typedef FPT representation_type;
   static AK_TOOLKIT_CONSTEXPR FPT marked_value() AK_TOOLKIT_NOEXCEPT { return std::numeric_limits<FPT>::quiet_NaN(); }
   static AK_TOOLKIT_CONSTEXPR bool is_marked_value(FPT v) { return v != v; }
 };
 
 template <typename T> // requires Regular<T>
-struct mark_value_init : markable_type<T>
+struct mark_value_init
 {
+  typedef T representation_type;
   static AK_TOOLKIT_CONSTEXPR T marked_value() AK_TOOLKIT_NOEXCEPT_AS(T()) { return T(); }
   static AK_TOOLKIT_CONSTEXPR bool is_marked_value(const T& v) { return v == T(); }
 };
 
 template <typename T>
-struct mark_stl_empty : markable_type<T>
+struct mark_stl_empty
 {
+  typedef T representation_type;
   static AK_TOOLKIT_CONSTEXPR T marked_value() AK_TOOLKIT_NOEXCEPT_AS(T()) { return T(); }
   static AK_TOOLKIT_CONSTEXPR bool is_marked_value(const T& v) { return v.empty(); }
 };
 
 template <typename OT>
-struct mark_optional : markable_type<typename OT::value_type, OT>
+struct mark_optional
 {
-  typedef typename OT::value_type value_type;
-  typedef OT storage_type;
+  typedef OT representation_type;
 
   static OT marked_value() AK_TOOLKIT_NOEXCEPT { return OT(); }
   static bool is_marked_value(const OT& v) { return !v; }
-  
+};
+
+template <typename OT>
+struct store_optional : markable_type<typename OT::value_type, OT>
+{
+  typedef OT representation_type;
+  typedef typename OT::value_type value_type;
+  typedef OT storage_type;
+
   static const value_type& access_value(const storage_type& v) { return *v; }
+  static const representation_type& representation(const storage_type& v) { return v; }
   static storage_type store_value(const value_type& v) { return v; }
   static storage_type store_value(value_type&& v) { return std::move(v); }
 };
 
-struct mark_bool : markable_type<bool, char, bool>
+struct mark_bool
 {
+  typedef bool representation_type;
   static AK_TOOLKIT_CONSTEXPR char marked_value() AK_TOOLKIT_NOEXCEPT { return char(2); }
   static AK_TOOLKIT_CONSTEXPR bool is_marked_value(char v) { return v == 2; }
   
   static AK_TOOLKIT_CONSTEXPR bool access_value(const char& v) { return bool(v); }
   static AK_TOOLKIT_CONSTEXPR char store_value(const bool& v) { return v; }
 };
+
+
 
 typedef mark_bool compact_bool;
 
@@ -120,7 +157,7 @@ struct markable_pod_storage_type_tag{};
 struct markable_dual_storage_type_tag{};
 
 template <typename T, typename POD_T>
-struct markable_pod_storage_type : markable_pod_storage_type_tag
+struct markable_pod_storage_type
 {
   static_assert(sizeof(T) == sizeof(POD_T), "pod storage for T has to have the same size and alignment as T");
   static_assert(std::is_pod<POD_T>::value, "second argument must be a POD type");
@@ -130,9 +167,10 @@ struct markable_pod_storage_type : markable_pod_storage_type_tag
 #endif // AK_TOOLBOX_NO_ARVANCED_CXX11
 
   typedef T value_type;
-  typedef POD_T storage_type;
+  typedef POD_T storage_type, representation_type;
   typedef const T& reference_type;
   
+  static const representation_type& representation(const storage_type&s) { return s; }
   static const value_type& access_value(const storage_type& s) { return reinterpret_cast<const value_type&>(s); }
   static const storage_type& store_value(const value_type& v) { return reinterpret_cast<const storage_type&>(v); }  
 };
@@ -160,21 +198,30 @@ template <typename Enum, typename std::underlying_type<Enum>::type Val>
 struct mark_enum : markable_pod_storage_type<Enum, typename std::underlying_type<Enum>::type>
 {
   static_assert(std::is_enum<Enum>::value, "mark_enum only works with enum types");
-  typedef markable_pod_storage_type<Enum, typename std::underlying_type<Enum>::type> base;
-  typedef typename base::storage_type storage_type;
+  typedef int representation_type;
   
-  static storage_type marked_value() { return Val; }
-  static bool is_marked_value(const storage_type& v) { return v == Val; }
+  static representation_type marked_value() { return Val; }
+  static bool is_marked_value(const representation_type& v) { return v == Val; }
+};
+
+template <typename Enum> 
+struct store_enum : markable_pod_storage_type<Enum, typename std::underlying_type<Enum>::type>
+{
+  static_assert(std::is_enum<Enum>::value, "mark_enum only works with enum types");
 };
 #else
 template <typename Enum, int Val> 
 struct mark_enum : markable_pod_storage_type<Enum, int>
 {
-  typedef markable_pod_storage_type<Enum, int> base;
-  typedef typename base::storage_type storage_type;
+  typedef int representation_type;
   
-  static storage_type marked_value() { return Val; }
-  static bool is_marked_value(const storage_type& v) { return v == Val; }
+  static representation_type marked_value() { return Val; }
+  static bool is_marked_value(const representation_type& v) { return v == Val; }
+};
+
+template <typename Enum> 
+struct store_enum : markable_pod_storage_type<Enum, int>
+{
 };
 #endif // AK_TOOLBOX_NO_UNDERLYING_TYPE
 
@@ -316,21 +363,24 @@ struct _init_value_tag {};
 struct _init_storage_tag {};
 struct _init_nothing_tag {};
 
-template <typename EVP>
+template <typename EVP, typename VT>
 union dual_storage_union
 {
-  typedef typename EVP::value_type value_type;
-  typedef typename EVP::storage_type storage_type;
+  typedef  VT value_type;
+  typedef typename EVP::representation_type representation_type;
   
   char         _nothing;
   value_type   _value;
-  storage_type _marking;
+  representation_type _marking;
   
   constexpr explicit dual_storage_union(_init_nothing_tag) AK_TOOLKIT_NOEXCEPT
     : _nothing() {}
-    
-  constexpr explicit dual_storage_union(_init_storage_tag) AK_TOOLKIT_NOEXCEPT_AS(storage_type(EVP::marked_value()))
-    : _marking(EVP::marked_value()) {}
+    /*
+  constexpr explicit dual_storage_union(_init_storage_tag) AK_TOOLKIT_NOEXCEPT_AS(representation_type(EVP::marked_value()))
+    : _marking(EVP::marked_value()) {}*/
+	
+  constexpr explicit dual_storage_union(representation_type && v) AK_TOOLKIT_NOEXCEPT_AS(representation_type(std::move(v)))
+    : _marking(std::move(v)) {}
     
   constexpr explicit dual_storage_union(value_type && v) AK_TOOLKIT_NOEXCEPT_AS(value_type(std::move(v)))
     : _value(std::move(v)) {}
@@ -341,14 +391,20 @@ union dual_storage_union
   ~dual_storage_union() {/* nothing here; will be properly destroyed by the owner */}
 };
   
-template <typename EVP>
+
+
+} // namespace detail_
+
+template <typename MP, typename VT, typename RT = const VT&>
 struct dual_storage
 {
-  typedef typename EVP::value_type value_type;
-  typedef typename EVP::storage_type storage_type;
-  typedef typename EVP::reference_type reference_type;
+  typedef  VT value_type;
+  typedef typename MP::representation_type representation_type;
+  typedef  RT reference_type;
   
-  dual_storage_union<EVP> value_;
+private:
+  typedef detail_::dual_storage_union<MP, VT> union_type;	
+  union_type value_;
   
 private:
   void* address() { return static_cast<void*>(std::addressof(value_)); }
@@ -377,31 +433,33 @@ private:
       throw;
     }
   
-  void construct_storage() { ::new (address()) storage_type(EVP::marked_value()); } 
-  void construct_storage_checked() AK_TOOLKIT_NOEXCEPT { construct_storage(); }  // std::terminate() if EVP::marked_value() throws
+  void construct_storage() { ::new (address()) representation_type(MP::marked_value()); } 
+  void construct_storage_checked() AK_TOOLKIT_NOEXCEPT { construct_storage(); }  // std::terminate() if MP::marked_value() throws
   
   void destroy_value() AK_TOOLKIT_NOEXCEPT { as_value_type().value_type::~value_type(); }
-  void destroy_storage() AK_TOOLKIT_NOEXCEPT { storage().storage_type::~storage_type(); }
-  void change_to_storage() AK_TOOLKIT_NOEXCEPT { destroy_value(); construct_storage(); } // std::terminate() if EVP::marked_value() throws
-  bool has_value() const { return !EVP::is_marked_value(storage()); }
-  value_type& as_value_type() { return reinterpret_cast<value_type&>(value_); }
-  const value_type& as_value_type() const { return reinterpret_cast<const value_type&>(value_); }
+  void destroy_storage() AK_TOOLKIT_NOEXCEPT { storage().representation_type::~representation_type(); }
+  void change_to_storage() AK_TOOLKIT_NOEXCEPT { destroy_value(); construct_storage(); } // std::terminate() if MP::marked_value() throws
+  bool has_value() const { return !MP::is_marked_value(storage()); }
   
 public:
-  storage_type& storage() { return reinterpret_cast<storage_type&>(value_); }
-  const storage_type& storage() const { return reinterpret_cast<const storage_type&>(value_); }
+  value_type& as_value_type() { return value_._value; }
+  const value_type& as_value_type() const { return value_._value; }
   
-  constexpr dual_storage() AK_TOOLKIT_NOEXCEPT_AS(dual_storage_union<EVP>(_init_storage_tag{}))
-    : value_(_init_storage_tag{}) {}
+public:
+  representation_type& storage() { return value_._marking; }
+  const representation_type& storage() const { return value_._marking; }
+  
+  constexpr dual_storage(representation_type&& mv) AK_TOOLKIT_NOEXCEPT_AS(union_type(std::move(mv)))
+    : value_(std::move(mv)) {}
     
-  constexpr explicit dual_storage(const value_type& v) AK_TOOLKIT_NOEXCEPT_AS(dual_storage_union<EVP>(v))
+  constexpr explicit dual_storage(const value_type& v) AK_TOOLKIT_NOEXCEPT_AS(union_type(v))
     : value_(v) {}
     
-  constexpr explicit dual_storage(value_type&& v) AK_TOOLKIT_NOEXCEPT_AS(dual_storage_union<EVP>(std::move(v)))
+  constexpr explicit dual_storage(value_type&& v) AK_TOOLKIT_NOEXCEPT_AS(union_type(std::move(v)))
     : value_(std::move(v)) {}
     
   dual_storage(const dual_storage& rhs) // TODO: add noexcept
-    : value_(_init_nothing_tag{})
+    : value_(detail_::_init_nothing_tag{})
     {
       if (rhs.has_value())
         construct_value(rhs.as_value_type());
@@ -410,7 +468,7 @@ public:
     }
     
   dual_storage(dual_storage&& rhs) // TODO: add noexcept
-    : value_(_init_nothing_tag{})
+    : value_(detail_::_init_nothing_tag{})
     {
       if (rhs.has_value())
         construct_value(std::move(rhs.as_value_type()));
@@ -468,6 +526,8 @@ public:
       rhs.change_to_storage();
     }
   }
+  
+  friend void swap(dual_storage& lhs, dual_storage& rhs) { lhs.swap_impl(rhs); } 
     
   ~dual_storage()
   {
@@ -478,75 +538,37 @@ public:
   }
 };
 
-template <typename T>
-struct select_storage_policy
-{
-  typedef typename std::conditional<
-                     std::is_base_of<markable_pod_storage_type_tag, T>::value,
-                     buffer_storage<T>, 
-                     typename std::conditional<
-                       std::is_base_of<markable_dual_storage_type_tag, T>::value,
-                       dual_storage<T>,
-                       member_storage<T> 
-                     >::type
-                                    
-                   >::type type;
-};
 
-// makable_base is used to prevent a code bloat. All members that do not depend
-// on tag, are moved to tis base class.
-template <typename N>
-class markable_base : select_storage_policy<N>::type
+template <typename MP, typename SP>
+class markable
 {
-  typedef typename select_storage_policy<N>::type base;
-  base& as_base() { return static_cast<base&>(*this); }
-  
-protected:
-  typedef typename N::value_type value_type;
-  typedef typename N::storage_type storage_type;
-  typedef typename N::reference_type reference_type;
-  void swap_storages(markable_base& rhs) { as_base().swap_impl(rhs.as_base()); }
-  
-  AK_TOOLKIT_CONSTEXPR_NOCONST storage_type& raw_value() { return base::storage(); }
+public:
+  typedef typename SP::value_type value_type;
+  typedef typename SP::storage_type storage_type;
+  typedef typename SP::reference_type reference_type;
+
+private:
+  storage_type _storage;
+  void swap_storages(markable& rhs) { using std::swap; swap(_storage, rhs._storage); }
   
 public:
-  AK_TOOLKIT_CONSTEXPR markable_base() AK_TOOLKIT_NOEXCEPT_AS(base())
-    : base() {}
+  AK_TOOLKIT_CONSTEXPR markable() AK_TOOLKIT_NOEXCEPT_AS(MP::marked_value())
+    : _storage(MP::marked_value()) {}
     
-  AK_TOOLKIT_CONSTEXPR markable_base(const value_type& v)
-    : base(v) {}
+  AK_TOOLKIT_CONSTEXPR markable(const value_type& v)
+    : _storage(SP::store_value(v)) {}
     
-  AK_TOOLKIT_CONSTEXPR markable_base(value_type&& v)
-    : base(std::move(v)) {}
+  AK_TOOLKIT_CONSTEXPR markable(value_type&& v)
+    : _storage(SP::store_value(std::move(v))) {}
     
-  AK_TOOLKIT_CONSTEXPR bool has_value() const { return !N::is_marked_value(base::storage()); }
+  AK_TOOLKIT_CONSTEXPR bool has_value() const {
+	return !MP::is_marked_value(SP::representation(_storage));
+  }
   
-  AK_TOOLKIT_CONSTEXPR reference_type value() const { return AK_TOOLKIT_ASSERTED_EXPRESSION(has_value(), N::access_value(base::storage())); }
+  AK_TOOLKIT_CONSTEXPR reference_type value() const { return AK_TOOLKIT_ASSERT(has_value()), SP::access_value(_storage); }
   
-  AK_TOOLKIT_CONSTEXPR storage_type const& storage_value() const { return base::storage(); }
-};
-
-} // namespace detail_
-
-template <typename N, typename /* tag */ = default_tag>
-class markable : public detail_::markable_base<N>
-{
-  typedef detail_::markable_base<N> super;
+  AK_TOOLKIT_CONSTEXPR storage_type const& storage_value() const { return _storage; }
   
-public:
-  typedef typename N::value_type value_type;
-  typedef typename N::storage_type storage_type;
-  typedef typename N::reference_type reference_type;
-
-  AK_TOOLKIT_CONSTEXPR markable() AK_TOOLKIT_NOEXCEPT_AS(storage_type(N::marked_value()))
-    : super() {}
-    
-  AK_TOOLKIT_CONSTEXPR explicit markable(const value_type& v)
-    : super(v) {}
-    
-  AK_TOOLKIT_CONSTEXPR explicit markable(value_type&& v)
-    : super(std::move(v)) {}
-
   friend void swap(markable& l, markable&r)
   {
     l.swap_storages(r);
@@ -557,6 +579,7 @@ public:
 
 using markable_ns::markable;
 using markable_ns::empty_scalar_value;
+using markable_ns::basic_storage_policy;
 using markable_ns::markable_type;
 using markable_ns::markable_pod_storage_type;
 using markable_ns::markable_dual_storage_type;
@@ -566,11 +589,12 @@ using markable_ns::mark_int;
 using markable_ns::mark_fp_nan;
 using markable_ns::mark_value_init;
 using markable_ns::mark_optional;
+using markable_ns::store_optional;
 using markable_ns::mark_stl_empty;
 using markable_ns::mark_enum;
+using markable_ns::store_enum;
+using markable_ns::dual_storage;
 
 } // namespace ak_toolkit
-
-#undef AK_TOOLKIT_ASSERTED_EXPRESSION
 
 #endif //AK_TOOLBOX_COMPACT_OPTIONAL_HEADER_GUARD_
