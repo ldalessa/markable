@@ -1,4 +1,15 @@
-# Reference
+:sourcedir: .
+:last-update-label!:
+:source-highlighter: coderay
+:icons: font
+= Markable - API Reference
+Reference
+:toclevels: 3
+:toc: left
+:toc-title:
+
+[reference]
+== Reference
 
 ```c++
 namespace ak_toolkit
@@ -9,11 +20,18 @@ namespace ak_toolkit
       class markable;
     
     void swap(markable & l, markable & r);
-    
-    struct default_tag{};
 
-    template <typename T, typename NT = T, typename CREF = const T&>
+    template <typename T, typename NT = T, typename CREF = const T&, typename REPT = NT>
       struct markable_type;
+           
+    template <typename MP>
+      struct dual_storage;
+      
+    template <typename MP>
+      void swap(dual_storage & l, dual_storage & r);
+      
+    template <typename MPT, typename T, typename DUAL_T>
+      struct markable_dual_storage_type;
     
     template <typename T, T Val>
       struct mark_int;
@@ -32,18 +50,13 @@ namespace ak_toolkit
       
     struct mark_bool;
     
-    struct markable_pod_storage_type_tag{};
-    
-    template <typename T, typename POD_T = std::aligned_storage_t<sizeof(T), alignof(T)>>
-      struct markable_pod_storage_type;
-      
     template <typename Enum, std::underlying_type_t<Enum> Val> 
       struct mark_enum;
   }
 
   using markable_ns::markable;
   using markable_ns::markable_type;
-  using markable_ns::markable_pod_storage_type;
+  using markable_ns::markable_dual_storage_type;
   using markable_ns::mark_bool;
   using markable_ns::mark_int;
   using markable_ns::mark_fp_nan;
@@ -51,32 +64,38 @@ namespace ak_toolkit
   using markable_ns::mark_optional;
   using markable_ns::mark_stl_empty;
   using markable_ns::mark_enum;
+  using markable_ns::dual_storage;
 }
 ```
 
-## Concept `Mark_policy`
+[concept_mark_policy]
+== Concept `Mark_policy`
 
 ```c++
-template <typename MP>
+template <typename SP>
 concept bool Mark_policy =
   requires
   {
     typename MP::value_type;
     typename MP::storage_type;
     typename MP::reference_type;
+    typename MP::representation_type;
   } &&
-  requires(const typename MP::storage_type & s,
-           const typename MP::value_type &   cv,
-                 typename MP::value_type &&  rv)
-  {
-    { MP::marked_value() }              -> typename MP::storage_type;
-    { MP::is_marked_value(s) } noexcept -> bool;
+  requires(const typename MP::representation_type & r
+           const typename MP::storage_type &        s,
+           const typename MP::value_type &          cv,
+                 typename MP::value_type &&         rv)
+  {   
+    { MP::marked_value() }              -> typename MP::representation_type;
+    { MP::is_marked_value(r) } noexcept -> bool;
     
     { MP::access_value(s) }             -> typename MP::reference_type;
+    { MP::representation(s) } noexcept  -> const typename MP::representation_type &;
     { MP::store_value(cv) }             -> typename MP::storage_type;
     { MP::store_value(std::move(rv)) }  -> typename MP::storage_type;
   };
 ```
+
 
 #### `value_type`
 This represents the type 'logically' stored by the markable object. Markable object tries to make an impression on the users that it is internally storing an objectof type `value_type`, which is often the case, but not always.
@@ -87,16 +106,23 @@ This represents the type of the sub-object physically stored inside markable obj
 #### `reference_type`
 This represents the type returned when the user requests read access to the stored value. Typically, this type is defined as `const value_type&`, however, sometimes when the accessed value is computed on the fly, this type may be defined as `value_type`.
 
-#### `{ marked_value() } -> storage_type`
-Returns a marked value encoded in `storage_type`. This will be later used to represent a markable object with no value.
+#### `representation_type`
+It is in this type that the special marked value is encoded. Typically, this is `storage_type`, but in some cases `storage_type` neds to be cast to this type.
 
-#### `{ is_marked_value(s) } -> bool`
+#### `{ marked_value() } -> representation_type`
+Returns a marked value encoded in `representation_type`. This will be later used to represent a markable object with no value.
+
+#### `{ is_marked_value(r) } -> bool`
 Checks if the given value represents a marked value.
 
 #### `{ access_value(s) } -> reference_type`
 *Preconditions:* `!is_marked_value(s)`.
 
 Given a value encoded in `storage_type`, provides access to it through type `reference_type`. Typically, when `reference_type` and `const storage_type&` are same type, this is an identity function.
+
+#### `{ MP::representation(s) } noexcept  -> const representation_type &`
+
+Performs adjustments (if necessary) to represent the stored object through `representation_type`.
 
 #### `{ store_value(v) } -> storage_type`
 Given a value of type `value_type` (possibly marked), returns its representation as `storage_type`. Typically, when `value_type` and `storage_type` are same type, this is an identity function.
@@ -108,7 +134,7 @@ namespace ak_toolkit
 {
   namespace markable_ns
   {
-    template <Mark_policy MP, typename Tag = default_tag>
+    template <Mark_policy MP>
     class markable
     {
     public:
@@ -146,17 +172,13 @@ namespace ak_toolkit
 
 *Effects:* Initializes storage value with expression `MP::store_value(v)`. 
 
-*Postconditions:* `has_value()`.
-
-*Note:* The semantics are in fact slightly different when `MP` is derived from `markable_pod_storage_type_tag`.
+*Postconditions:* `has_value() == !MP::is_marked_value(v)`.
 
 #### `markable(value_type&& v)`
 
 *Effects:* Initializes storage value with expression `MP::store_value(std::move(v))`. 
 
-*Postconditions:* `has_value()`.
-
-*Note:* The semantics are in fact slightly different when `MP` is derived from `markable_pod_storage_type_tag`.
+*Postconditions:* `has_value() == !MP::is_marked_value(v)`.
 
 #### `reference_type has_value() const`
 
@@ -184,63 +206,82 @@ namespace ak_toolkit
 
 If an exception is thrown during the assignment, the state of `*this` depends on the exception safety guarantees of `storage_type`. If `storage_type` offers a weak guarantee, the corresponding `markable<>` type also offers only a weak guarantee. In particular, the value of `has_value()` may change.
 
+
 ## Mark policy creation tools
 
 The follwoing tools help build custom mark policies.
-
-### Class `markable_pod_storage_type_tag`
-
-This is an empty class. Mark policies may use it as a base class in order to control the behavior of the instances of class template `markable`. When a mark policy `MP` derives (directly or indirectly) from `markable_pod_storage_type_tag`, `markable<MP>` does no longer store the value directly as member, but instead uses a raw aligned storage layout-compatible with the value type, and uses in-place construction and destruction to manage the life-time of the stored value. This is necessary to implement mark policies that use storage techniques such as one in `markable_pod_storage_type`.
-
-### Class template `markable_pod_storage_type`
-
-This class template can be used for creating a mark policy for types where no logical value of `T` can be used for marked value, but there exists a bit-pattern in memory occupied by `T` that never represents a valid value of `T`.
-
-```c++
-template <typename T, typename POD_T>
-  requires std::is_pod<POD_T>::value
-        && sizeof(T) == sizeof(POD_T)
-        && alignof(T) == alignof(POD_T)
-        && std::is_standrd_layout<T>::value
-struct markable_pod_storage_type : markable_pod_storage_type_tag
-{
-  typedef T value_type;
-  typedef POD_T storage_type;
-  typedef const T& reference_type;
-  
-  static const value_type& access_value(const storage_type& s);
-  static const storage_type& store_value(const value_type& v); 
-};
-```
-
-`T` is the type of values we want `markable` to represent. `POD_T` is the type designed to represent the memory occupied by `T`: it has to be a POD, with the same size and alignment as `T`.
-
-*Requires:* `T~` and `POD_T` are pointer-interchangable.
-
-#### `const value_type& access_value(const storage_type& s)`
-*Returns:* `reinterpret_cast<const value_type&>(s)`.
-
-#### `const storage_type& store_value(const value_type& v)`
-*Returns:* `return reinterpret_cast<const storage_type&>(v)`.
-
 
 ### Class template `markable_type`
 
 This class template provides default definitions form most of the requirements in concept `Mark_policy`. When declaring your own mark policy, you probably want to derive from this class template (although it is not strictly necessary). 
 
 ```c++
-template <typename T, typename STORE = T, typename CREF = const T&>
+template <typename T, typename STORE = T, typename CREF = const T&, typename REPT = NT>
 struct markable_type
 {
   typedef T     value_type;
   typedef STORE storage_type;
   typedef CREF  reference_type;
+  typedef REPT  representation_type;
   
-  static constexpr const value_type& access_value(const storage_type& v) { return v; }
+  static constexpr reference_type access_value(const storage_type& v) { return v; }
+  static constexpr const representation_type& representation(const storage_type& v) { return v; }
   static constexpr const value_type& store_value(const value_type& v) { return v; }
   static constexpr value_type&& store_value(value_type&& v) { return std::move(v); }
 };
 ```
+
+### Class template `markable_dual_storage_type`
+
+You typically want to derive from this type when defining a mark policy for dual storage. This class template provides default definitions form most of the requirements in concept `Mark_policy`. `MPT` is the type of the policy you are defining (we are using the CRTP). `T` is the `value_type` you want to logically represent. `DUAL_T` is a type layout compatible with `T` but with weaker invariants, so that it can store more valid states than `T`.
+
+```c++
+template <typename MPT, typename T, typename DUAL_T>
+struct markable_dual_storage_type
+{
+  typedef T                 value_type;
+  typedef DUAL_T            representation_type;
+  typedef const T&          reference_type;
+  typedef dual_storage<MPT> storage_type;
+  
+  static reference_type access_value(const storage_type& v) { return v.as_value_type(); }
+  static const representation_type& representation(const storage_type& v) { return v.representation(); }
+  static storage_type store_value(const value_type& v) { return storage_type(v); }
+  static storage_type store_value(value_type&& v) { return storage_type(std::move(v)); } 
+};
+```
+
+*Requires:* `MPT` is a model of `Mark_policy`; `T` and `DUAL_T` are layout-compatible types.
+
+### Class template `dual_storage`
+
+Class used to store inside a union members of type `value_type` and `representation_type`, and manage them appropriately.
+
+```c++
+template <typename MP>
+struct dual_storage
+{
+  typedef typename MP::value_type value_type;
+  typedef typename MP::representation_type representation_type;
+  typedef typename MP::reference_type reference_type;
+
+  value_type&        as_value_type();
+  const value_type&  as_value_type() const;
+  representation_type&       representation();
+  const representation_type& representation() const;
+  
+  constexpr dual_storage(representation_type&& mv) noexcept(noexcept(representation_type(std::move(mv)))));
+  constexpr explicit dual_storage(const value_type& v) noexcept(noexcept(value_type(v))));
+  constexpr explicit dual_storage(value_type&& v) noexcept(noexcept(value_type(std::move(v))));
+  dual_storage(const dual_storage& rhs); // TODO: add noexcept
+  dual_storage(dual_storage&& rhs); // TODO: add noexcept    
+  void operator=(const dual_storage& rhs);    
+  void operator=(dual_storage&& rhs); // TODO: add noexcept  
+  friend void swap(dual_storage& lhs, dual_storage& rhs);  // TODO: add conditional noexcept
+  ~dual_storage();
+};
+```
+
 
 ## Predefined mark policies
 
@@ -341,13 +382,16 @@ struct mark_bool : markable_type<bool, char, bool>
 ```c++
 template <typename Enum, std::underlying_type_t<Enum> Val> 
   requires std::is_enum<Enum>::value
-struct mark_enum : markable_pod_storage_type<Enum, std::underlying_type_t<Enum>>
+struct mark_enum : markable_type<Enum, typename std::underlying_type<Enum>::type, Enum>
 {
-  typedef markable_pod_storage_type<Enum, std::underlying_type_t<Enum>> base;
-  typedef typename base::storage_type storage_type;
+  typedef typename base::representation_type representation_type;
+  typedef typename base::storage_type        storage_type;
   
-  static storage_type marked_value() { return Val; }
-  static bool is_marked_value(const storage_type& v) { return v == Val; }
+  static constexpr representation_type marked_value() noexcept { return Val; }
+  static constexpr bool is_marked_value(const representation_type& v) noexcept { return v == Val; }
+  
+  static constexpr Enum access_value(const storage_type& v) noexcept { return static_cast<Enum>(v); }
+  static constexpr storage_type store_value(const Enum& v) noexcept { return static_cast<storage_type>(v); }
 };
 ```
 

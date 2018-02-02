@@ -183,7 +183,7 @@ because function `value()` should return a `bool`  and we are storing no `bool` 
 
 ### Using POD storage for empty value
 
-Sometimes there is no spare value of `T`, but there is a spare sequence of bits in `POD<T>`, where `POD<T>` is a raw-memory representation of `T` (i.e., its local part -- the part that amounts to `sizeof(T)`). Consider the following type:
+Sometimes there is no spare value of `T`, but there is a spare combination of member values in `DUAL<T>`, where `DUAL<T>` a type layout-compatible with `T` but without invariants.  Consider the following type:
 
 ```c++
 class minutes_since_midnight
@@ -211,85 +211,70 @@ public:
 };
 ```
 
-Member subobject `min_` is expected to range from 0 (inclusive) to 1440 (exclusive). This leaves many spare values, e.g., -1. But if we try to use them, we violate the invariant, and trigger assertion failure. In such case, `markable` allows you to use a POD type `int` for storage and only reinterpret it as `minutes_since_midnight` upon extracting the value. Of course, the wrapper deals with manual life-time management issues internally, calling in-place `new` and pseudo destructor calls where necessary. In order to use that functionality, you have to create an empty value policy that derives from `markable_pod_storage_type`:
+Member subobject `min_` is expected to range from 0 (inclusive) to 1440 (exclusive). This leaves many spare values, e.g., -1. But if we try to use them, we violate the invariant, and trigger assertion failure. To address such cases, `markable` provides the dual storage. This will work if your type is standard-layout. You need to define a type layout-compatible with `minutes_since_midnight`:
 
 ```c++
-struct mark_minutes : markable_pod_storage_type<minutes_since_midnight, int>
+struct raw_minutes_since_midnight
 {
-  static storage_type marked_value() { return -1; }
-  static bool is_marked_value(const storage_type& v) { return v == -1; }
+  int min_;
 };
 ```
 
-The first argument is the type we want to represent; the second type (`int`) is the POD type, pointer-interconvertible with `T` (the first argument). the two functions `marked_value` and `is_marked_value` describe the empty value on the POD type, where no invariant is enforced.
-
-WARNING: you have to make sure that the two parameters are pointer-interconvertibe: otherwise you are risking an *undefined behavior*.
-
-### Using 'dual' storage for empty value
-
-WARNING: this feature uses `reinterpret_cast`s and has not yet been determined to be UB-safe.
-Sometimes POD storage does not suffice. Consider the following example. We want to store a date interval, determined by the first and the last date. For representin dates, we use `boost::gregorian::date`, for the interval, the following class:
+Now you can request a "dual storage". It is a union that holds either a real type or its weaker counterpart:
 
 ```c++
-using Date = boost::gregorian::date;
-
-class DateInterval
+union 
 {
-  Date _first;
-  Date _last;
-  
-public:
-  bool invariant() const { return _first <= _last; }
-  
-  explicit DateInterval(const Date& f, const Date& l)
-    : _first (f), _last(l)
-    {
-      assert (invariant());
-    }
-}
-```
-
-This class has an intuitive invariant: first date in interval, cannot be greater than the last. This also suggests how we might represent the marked value: by making `_first` greater than `last`. However, POD storage cannot be used here, because `boost::gregorian::date` is a third party library, and we do not know its memory layout. And even if we knew it, it might change with the newer release of the library. Also, `boost::gregorian::date` is not a POD: it has its own invariants, and we want to respect them. 
-
-What we can do, is to provide another, non-POD type for representing both marked value and any value of `DateInterval`:
-
-```c++
-using WeakDateInterval = std::pair<Date, Date>;
-```
-
-`WeakDateInterval` is a "dual" type to "DateInterval", with the same memory layout (not only the `sizeof()` part), but weaker invariant. Now, we can use the dual storage, that creates and destroys interchangeably `DateInterval` and `WeakDateInterval` as needed. This is how you assemble all the these things together:
-
-```c++
-struct mark_interval : markable_dual_storage_type<DateInterval, WeakDateInterval>
-{
-  static storage_type marked_value() { return {Date{2017, Feb, 2}, Date{2016, Jan, 1}}; }
-  static bool is_marked_value(const storage_type& v) { return v.second < v.first; }
+  minutes_since_midnight     value_;
+  raw_minutes_since_midnight raw_representation_;
 };
-
-using opt_interval = markable<mark_interval>;
 ```
 
-However, there are two gotchas with using dual storage.
+Now, either we are storing a value (first member is active), or we are storing the row type (second member is active), in which we can encode the value impossible in value type. We do not know which member of the union is active at a given moment, but it is always safe to onspect the value of member `raw_representation_`. This is guaranteed by the *common initial sequence* feature of unions in C++. When we observe the special value, we know that the second member is active. Otherwise we know that the active member is `value_`.
 
-1. Types `T` and `DualT` passed to `markable_dual_storage_type` need to preserve certain relation: you should be able to observe the state of `T` by accessing members of `DualT`. In other words, sometimes `is_marked_value` will be invoked upon an object of type `T` `reinterpret_cast`-ed to `const DualT&`, and this must workcorrectly.
-
-2. If policy function `marked_value` or `DualT`'s move assignment throws an exception during the unsuccessful assignment of `markable<>` object, the behavior is undefined; or in compilers taht support `noexcept`, function `std::terminate()` is called. The library does not validate it statically, so make sure constructors of `DualT` do not throw (or accept the consequences).
-
-
-## Type-altering tag
-
-It is possible to pass a second type parameter to class template `markable`.
-Such a type does not need to be complete. It is used as a 'tag' to trigger different
-instantiations of template `markable` with the same empty-value policy:
+In order to define the mark policy, you have to inherit from `markable_dual_storage_type` and define the special value:
 
 ```c++
-using Count = markable<mark_int<int, -1>, class count_tag>;
-using Num   = markable<mark_int<int, -1>, class num_tag>;
-
-static_assert(!std::is_same<Count, Num>::value, "different types");
+struct mark_minutes : markable_dual_storage_type<mark_minutes, minutes_since_midnight, raw_minutes_since_midnight>
+{
+  static representation_type marked_value() { return {-1}; }
+  static bool is_marked_value(const representation_type& v) { return v.minutes == -1; }
+};
 ```
 
-This behaves similarly to 'opaque typedef' feature: we get identical interface and behaviour, but two distinct non-interchangeable types.
+The first argument is the type of the policy we are defining. (We are using the CRTP.) The second is the logical value type, and the third is itd "raw" layout-compatible conterpart. 
+
+WARNING: However, there are two gotchas with using dual storage.
+
+1. Types `T` and `DualT` passed to `markable_dual_storage_type` need to preserve certain relation: they have to be layout-compatible. There is no way to enforce it statically in C++, so you have to make sure this is the case. Otherwise you are risking UB.
+
+2. If policy function `marked_value` or `DualT`'s move assignment throws an exception during the unsuccessful assignment of `markable<>` object, the behavior is undefined; or in compilers that support `noexcept`, function `std::terminate()` is called. The library does not validate it statically, so make sure constructors of `DualT` do not throw (or accept the consequences). There is no danger if you use trivially-copyable types for `DualT`.
+
+
+## Opaque-typedefed markables
+
+Because `markable` uses policies, you can get the opaque typedef for your markable types for free.
+
+Suppose you have two conceptually different types `Count` and `Num`, but because they are markable types using the same policy, they end um being one and the same type:
+
+```c++
+using Count = markable<mark_int<int, -1>>;
+using Num   = markable<mark_int<int, -1>>;
+
+static_assert(std::is_same<Count, Num>::value, "same type");
+```
+
+In orer to make the two markable types distinct, you can alter the type of the policies (but not their semantics) by inheriting from them:
+
+```c++
+struct mark_count : mark_int<int, -1> {};
+struct mark_num   : mark_int<int, -1> {};
+
+using Count = markable<mark_count>;
+using Num   = markable<mark_num>;
+
+static_assert(!std::is_same<Count, Num>::value, "different types!");
+```
 
 
 ## Comparison with Boost.Optional
