@@ -257,7 +257,7 @@ or we are storing the row type (second member is active),
 in which we can encode the value impossible in value type.
 We do not know which member of the union is active at a given moment,
 but it is always safe to inspect the value of member `representation_`.
-This is guaranteed by the *common initial sequence* feature of unions in C++.
+This is guaranteed by the _common initial sequence_ feature of unions in C++.
 When we observe the special value, we know that the second member is active.
 Otherwise we know that the active member is `value_`.
 
