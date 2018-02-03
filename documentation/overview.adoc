@@ -6,7 +6,7 @@ NOTE: the documentation is not complete yet. I am still writing it...
 
 This library offers a way to represent optional (or nullable) objects (objects that may not have a value) of type `T`
 by encoding the no-value state in one of the states of `T`. 
-This is an alternative to [`boost::optional`](http://www.boost.org/doc/libs/1_59_0/libs/optional/doc/html/index.html) 
+This is an alternative to link:http://www.boost.org/doc/libs/1_59_0/libs/optional/doc/html/index.html[`boost::optional`] 
 that offers a limited interface and a guarantee that the size of optional `T` is the same as the size of `T`.
 
 In order to create an optional object type for your type `T`, 
@@ -315,7 +315,7 @@ static_assert(!std::is_same<Count, Num>::value, "different types!");
 
 ## Comparison with Boost.Optional
 
-This library is not a replacement for [`boost::optional`](http://www.boost.org/doc/libs/1_59_0/libs/optional/doc/html/index.html). While there is some overlap, both libraries target different use cases.
+This library is not a replacement for link:http://www.boost.org/doc/libs/1_59_0/libs/optional/doc/html/index.html[`boost::optional`]. While there is some overlap, both libraries target different use cases.
 
 ### Genericity
 
@@ -327,8 +327,7 @@ Having a nested `markable` is technically possible, but requires sparing two val
 
 Some type `T` may not have a 'spare' value to indicate the marked state. In such case, `markable` cannot help you.
 In contrast, `boost::optional<T>` will work just fine: the additional marked state is stored separately.
-In a way, `boost::optional<T>` can be thought as
-[`boost::variant`](http://www.boost.org/doc/libs/1_59_0/doc/html/variant.html)`<boost::none_t, T>`.
+In a way, `boost::optional<T>` can be thought as link:http://www.boost.org/doc/libs/1_59_0/doc/html/variant.html[`boost::variant`]`<boost::none_t, T>`.
 
 ### Life-time management
 
