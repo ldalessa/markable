@@ -346,7 +346,7 @@ In a way, `boost::optional<T>` can be thought as link:http://www.boost.org/doc/l
 
 In general, it is expected that in the first pass of the implementation of your program, you will use `boost::optional<T>` as a simple ready-to-use solution. Later, if you determine that `boost::optional` kills your performance, you can think of replacing it with `markable` and how you want to represent the no-value state.
 
-another use case is when you are currently using objects of scalar types with encoded special values (like type `std::string::size_type` with value `std::string::npos`) and you want to change it into something safer but be sure you are adding no runtime overhead. You can change your type to `markable<mark_int<string::size_type, string::npos>>`.
+Another use case is when you are currently using objects of scalar types with encoded special values (like type `std::string::size_type` with value `std::string::npos`) and you want to change it into something safer but be sure you are adding no runtime overhead. You can change your type to `markable<mark_int<string::size_type, string::npos>>`.
 
 ## Future plans
 
