@@ -270,64 +270,67 @@ void test_optional_as_storage()
 #endif
 
 
-class minutes_since_midnight
+class range
 {
-  int minutes_;
+  int min_, max_;
+  bool invariant() const { return min_ <= max_; }
   
 public:
-  bool invariant() const { return minutes_ >= 0 && minutes_ < 24 * 60; }
-  
-  explicit minutes_since_midnight(int minutes) 
-  : minutes_(minutes) 
+  range(int min, int max) : min_(min), max_(max) 
   {
     assert (invariant());
     ++objects_created;
   } 
   
-  minutes_since_midnight(minutes_since_midnight const& rhs)
-  : minutes_(rhs.minutes_)
+  range(range const& rhs) : min_(rhs.min_), max_(rhs.max_)
   {
     assert (invariant());
     assert (rhs.invariant());
     ++objects_created;
   }
   
-  int as_int() const
+  int min() const
   {
     assert (invariant());
-    return minutes_;
+    return min_;
   }
   
-  friend bool operator==(const minutes_since_midnight& l, const minutes_since_midnight& r)
+  int max() const
   {
-    return l.minutes_ == r.minutes_;
+    assert (invariant());
+    return max_;
   }
   
-  ~minutes_since_midnight()
+  friend bool operator==(const range& l, const range& r)
+  {
+    return l.min_ == r.min_ && l.max_ == r.max_;
+  }
+  
+  ~range()
   {
     assert (invariant());
     ++objects_destroyed;
   }
 };
 
-struct raw_minutes_since_midnight
+struct range_representation
 {
-  int minutes;
+  int min_, max_;
 };
 
-struct mark_minutes : markable_dual_storage_type<mark_minutes, minutes_since_midnight, raw_minutes_since_midnight>
+struct mark_range : markable_dual_storage_type<mark_range, range, range_representation>
 {
-  static representation_type marked_value() { return {-1}; }
-  static bool is_marked_value(const representation_type& v) { return v.minutes == -1; }
+  static representation_type marked_value() { return {0, -1}; }
+  static bool is_marked_value(const representation_type& v) { return v.min_ > v.max_; }
 };
 
 void test_mark_dual_storage()
 {
   reset_globals();
   {
-    typedef markable<mark_minutes> opt_time;
-    const minutes_since_midnight t0(0), tM(1439);
-    opt_time ot_, ot0 (t0), otM(tM);
+    typedef markable<mark_range> opt_range;
+    const range t0(0, 0), tM(0, 10);
+    opt_range ot_, ot0 (t0), otM(tM);
     assert (!ot_.has_value());
     assert ( ot0.has_value());
     assert ( otM.has_value());
@@ -336,14 +339,14 @@ void test_mark_dual_storage()
     assert (ot0.value() == t0);
     assert (otM.value() == tM);
     
-    opt_time otM2 = otM;
+    opt_range otM2 = otM;
     assert (otM.has_value());
     assert (otM.value() == tM);
     assert(objects_created == 5);
     
     ot_ = otM2;
     assert (ot_.has_value());
-    assert (ot_.value().as_int() == 1439);
+    assert (ot_.value() == tM);
     assert(objects_created == 6);
     assert(objects_destroyed == 0);
     
@@ -356,7 +359,7 @@ void test_mark_dual_storage()
     swap(ot_, otM);
     assert ( ot_.has_value());
     assert (!otM.has_value());
-    assert (ot_.value().as_int() == 1439);
+    assert (ot_.value() == tM);
     assert(objects_created == 7);
     assert(objects_destroyed == 2);
   }
