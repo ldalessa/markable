@@ -4,7 +4,7 @@
 
 Initial version.
 
-## Version 0.2.0
+## Version 1.0.0
 
  * Removed POD storage mark policy, which relied on `reinterpret_cast`s as it would not guarantee
    the expected results according to C++ rules. We now only have "dual" storage mark policy which

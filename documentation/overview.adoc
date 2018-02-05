@@ -266,26 +266,19 @@ In order to define the mark policy, you have to inherit from `markable_dual_stor
 ```c++
 struct mark_range : markable_dual_storage_type<mark_range, range, range_representation>
 {
-  static representation_type marked_value() { return {0, -1}; }
-  static bool is_marked_value(const representation_type& v) { return v.min_ > v.max_; }
+  static representation_type marked_value() noexcept { return {0, -1}; }
+  static bool is_marked_value(const representation_type& v) noexcept { return v.min_ > v.max_; }
 };
 ```
 
 The first argument is the type of the policy we are defining. (We are using the CRTP.)
 The second is the logical value type, and the third is itd "raw" layout-compatible conterpart. 
 
-WARNING: However, there are two gotchas with using dual storage.
+WARNING: However, there is a certain danger involved when using dual storage. Types `T` and `DualT` passed to `markable_dual_storage_type` need to preserve certain relation: they have to be layout-compatible. There is no way to enforce it statically in C++, so you have to make sure this is the case. Otherwise you are risking UB.
 
-1. Types `T` and `DualT` passed to `markable_dual_storage_type` need to preserve certain relation: 
-   they have to be layout-compatible. There is no way to enforce it statically in C++,
-   so you have to make sure this is the case. Otherwise you are risking UB.
+Using `markable_dual_storage_type` requires that the dual storage has a `noexcept` move constructor and that the marked-value policy function `marked_value()` is also `noexcept`. This requirement is necessary to guarantee exceptions safety for `markable` object. If this requirement is not met the attempt to instantiate a markable object will result in a compile-time error.
 
-2. If policy function `marked_value` or `DualT`'s move assignment throws an exception
-   during the unsuccessful assignment of `markable<>` object, the behavior is undefined;
-   or in compilers that support `noexcept`, function `std::terminate()` is called.
-   The library does not validate it statically, so make sure constructors of `DualT`
-   do not throw (or accept the consequences). There is no danger if you use trivially-copyable types for `DualT`.
-
+If either of the functions is not `noexcept` in your case but you still want to use the policy and take the risk that neither of the two functions will ever throw, you can use class template `markable_dual_storage_type_unsafe` instead. This type does not enforce `noexcept` statically, but will call `std::terminate` should any of the two functions throw when performing operations on `markable` in critical places.
 
 ## Opaque-typedefed markables
 

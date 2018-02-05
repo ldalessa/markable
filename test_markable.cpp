@@ -320,7 +320,7 @@ struct range_representation
 
 struct mark_range : markable_dual_storage_type<mark_range, range, range_representation>
 {
-  static representation_type marked_value() { return {0, -1}; }
+  static representation_type marked_value() AK_TOOLKIT_NOEXCEPT { return {0, -1}; }
   static bool is_marked_value(const representation_type& v) { return v.min_ > v.max_; }
 };
 

@@ -32,6 +32,9 @@ namespace ak_toolkit
       
     template <typename MPT, typename T, typename DUAL_T>
       struct markable_dual_storage_type;
+	  
+	template <typename MPT, typename T, typename DUAL_T>
+      struct markable_dual_storage_type_unsafe;
     
     template <typename T, T Val>
       struct mark_int;
@@ -57,6 +60,7 @@ namespace ak_toolkit
   using markable_ns::markable;
   using markable_ns::markable_type;
   using markable_ns::markable_dual_storage_type;
+  using markable_ns::markable_dual_storage_type_unsafe;
   using markable_ns::mark_bool;
   using markable_ns::mark_int;
   using markable_ns::mark_fp_nan;
@@ -251,7 +255,13 @@ struct markable_dual_storage_type
 };
 ```
 
-*Requires:* `MPT` is a model of `Mark_policy`; `T` and `DUAL_T` are layout-compatible types.
+*Requires:* `MPT` is a model of `Mark_policy`; `T` and `DUAL_T` are layout-compatible types; `std::is_nothrow_move_constructible<DUAL_T>::value is `true`; `noexcept(MPT::marked_value())` is `true`.
+
+### Class template `markable_dual_storage_type_unsafe`
+
+Its semantics and usage are the same as in `markable_dual_storage_type` except for the relaxed requirements.
+
+*Requires:* `MPT` is a model of `Mark_policy`; `T` and `DUAL_T` are layout-compatible types; 
 
 ### Class template `dual_storage`
 

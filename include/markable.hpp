@@ -15,11 +15,13 @@
 
 #if defined AK_TOOLBOX_NO_ARVANCED_CXX11
 #  define AK_TOOLKIT_NOEXCEPT
+#  define AK_TOOLKIT_IS_NOEXCEPT(E) true
 #  define AK_TOOLKIT_CONSTEXPR
 #  define AK_TOOLKIT_EXPLICIT_CONV
 #  define AK_TOOLKIT_NOEXCEPT_AS(E)
 #else
 #  define AK_TOOLKIT_NOEXCEPT noexcept 
+#  define AK_TOOLKIT_IS_NOEXCEPT(E) noexcept(E) 
 #  define AK_TOOLKIT_CONSTEXPR constexpr 
 #  define AK_TOOLKIT_EXPLICIT_CONV explicit 
 #  define AK_TOOLKIT_NOEXCEPT_AS(E) noexcept(noexcept(E))
@@ -71,14 +73,6 @@ struct mark_int : markable_type<T>
   static AK_TOOLKIT_CONSTEXPR bool is_marked_value(T v) { return v == Val; }
 };
 
-// for backward compatibility only:
-template <typename T, T Val>
-struct empty_scalar_value : markable_type<T>
-{
-  static AK_TOOLKIT_CONSTEXPR T marked_value() AK_TOOLKIT_NOEXCEPT { return Val; }
-  static AK_TOOLKIT_CONSTEXPR bool is_marked_value(T v) { return v == Val; }
-};
-
 template <typename FPT>
 struct mark_fp_nan : markable_type<FPT>
 {
@@ -124,33 +118,6 @@ struct mark_bool : markable_type<bool, char, bool>
 };
 
 
-
-typedef mark_bool compact_bool;
-
-
-
-template <typename T, typename POD_T>
-struct markable_pod_storage_type
-{
-  static_assert(sizeof(T) == sizeof(POD_T), "pod storage for T has to have the same size and alignment as T");
-  static_assert(std::is_pod<POD_T>::value, "second argument must be a POD type");
-  static_assert(std::is_standard_layout<T>::value, "T must be a Standard Layout type");
-#ifndef AK_TOOLBOX_NO_ARVANCED_CXX11
-  static_assert(alignof(T) == alignof(POD_T), "pod storage for T has to have the same alignment as T");
-#endif // AK_TOOLBOX_NO_ARVANCED_CXX11
-
-  typedef T value_type;
-  typedef POD_T storage_type, representation_type;
-  typedef const T& reference_type;
-  
-  static const representation_type& representation(const storage_type&s) { return s; }
-  static const value_type& access_value(const storage_type& s) { return reinterpret_cast<const value_type&>(s); }
-  static const storage_type& store_value(const value_type& v) { return reinterpret_cast<const storage_type&>(v); }  
-};
-
-
-
-
 #ifndef AK_TOOLBOX_NO_UNDERLYING_TYPE
 template <typename Enum, typename std::underlying_type<Enum>::type Val> 
 struct mark_enum : markable_type<Enum, typename std::underlying_type<Enum>::type, Enum>
@@ -175,12 +142,8 @@ struct mark_enum : markable_type<Enum, int, Enum>
   static AK_TOOLKIT_CONSTEXPR storage_type store_value(const Enum& v) AK_TOOLKIT_NOEXCEPT { return static_cast<storage_type>(v); }
 };
 
-
 namespace detail_ {
 
-
-struct _init_value_tag {};
-struct _init_storage_tag {};
 struct _init_nothing_tag {};
 
 template <typename MP>
@@ -208,7 +171,14 @@ union dual_storage_union
   ~dual_storage_union() {/* nothing here; will be properly destroyed by the owner */}
 };
   
+template <typename MVP, typename = void>
+struct check_safe_dual_storage_exception_safety : ::std::true_type {};
 
+template <typename MVP>
+struct check_safe_dual_storage_exception_safety<MVP, typename MVP::is_safe_dual_storage_mark_policy>
+: std::integral_constant<bool, AK_TOOLKIT_IS_NOEXCEPT(typename MVP::representation_type(MVP::marked_value()))> 
+{
+};
 
 } // namespace detail_
 
@@ -356,7 +326,7 @@ public:
 };
 
 template <typename MPT, typename T, typename DUAL_T>
-struct markable_dual_storage_type
+struct markable_dual_storage_type_unsafe
 {
   static_assert(sizeof(T) == sizeof(DUAL_T), "dual storage for T has to have the same size and alignment as T");
   static_assert(std::is_standard_layout<T>::value, "T must be a Standard Layout type");
@@ -380,15 +350,21 @@ struct markable_dual_storage_type
   { return storage_type(std::move(v)); } 
 };
 
+template <typename MPT, typename T, typename DUAL_T>
+struct markable_dual_storage_type : markable_dual_storage_type_unsafe<MPT, T, DUAL_T>
+{
+  typedef void is_safe_dual_storage_mark_policy; 
+};
 
 template <typename MP>
 class markable
 {
-  typedef MP SP;
+  static_assert (detail_::check_safe_dual_storage_exception_safety<MP>::value,
+                 "while building a markable type: dual storage for T must not throw exceptions from move constructor or when creating the marked value");
 public:
-  typedef typename SP::value_type value_type;
-  typedef typename SP::storage_type storage_type;
-  typedef typename SP::reference_type reference_type;
+  typedef typename MP::value_type value_type;
+  typedef typename MP::storage_type storage_type;
+  typedef typename MP::reference_type reference_type;
 
 private:
   storage_type _storage;
@@ -398,16 +374,16 @@ public:
     : _storage(MP::marked_value()) {}
     
   AK_TOOLKIT_CONSTEXPR markable(const value_type& v)
-    : _storage(SP::store_value(v)) {}
+    : _storage(MP::store_value(v)) {}
     
   AK_TOOLKIT_CONSTEXPR markable(value_type&& v)
-    : _storage(SP::store_value(std::move(v))) {}
+    : _storage(MP::store_value(std::move(v))) {}
     
   AK_TOOLKIT_CONSTEXPR bool has_value() const {
-	return !MP::is_marked_value(SP::representation(_storage));
+	return !MP::is_marked_value(MP::representation(_storage));
   }
   
-  AK_TOOLKIT_CONSTEXPR reference_type value() const { return AK_TOOLKIT_ASSERT(has_value()), SP::access_value(_storage); }
+  AK_TOOLKIT_CONSTEXPR reference_type value() const { return AK_TOOLKIT_ASSERT(has_value()), MP::access_value(_storage); }
   
   AK_TOOLKIT_CONSTEXPR storage_type const& storage_value() const { return _storage; }
   
@@ -420,11 +396,9 @@ public:
 } // namespace markable_ns
 
 using markable_ns::markable;
-using markable_ns::empty_scalar_value;
 using markable_ns::markable_type;
-using markable_ns::markable_pod_storage_type;
 using markable_ns::markable_dual_storage_type;
-using markable_ns::compact_bool;
+using markable_ns::markable_dual_storage_type_unsafe;
 using markable_ns::mark_bool;
 using markable_ns::mark_int;
 using markable_ns::mark_fp_nan;
