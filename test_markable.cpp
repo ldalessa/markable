@@ -324,12 +324,79 @@ struct mark_range : markable_dual_storage_type<mark_range, range, range_represen
   static bool is_marked_value(const representation_type& v) { return v.min_ > v.max_; }
 };
 
+struct range2_members
+{
+  int min_, max_;
+};
+
+class range2 : private range2_members
+{ 
+  bool invariant() const { return min_ <= max_; }
+  
+public:
+  range2(int min, int max) : range2_members{min, max}
+  {
+    assert (invariant());
+    ++objects_created;
+  } 
+  
+  range2(range2 const& rhs) : range2_members(static_cast<range2_members const&>(rhs))
+  {
+    assert (invariant());
+    assert (rhs.invariant());
+    ++objects_created;
+  }
+  
+  int min() const
+  {
+    assert (invariant());
+    return min_;
+  }
+  
+  int max() const
+  {
+    assert (invariant());
+    return max_;
+  }
+  
+  friend bool operator==(const range2& l, const range2& r)
+  {
+    return l.min_ == r.min_ && l.max_ == r.max_;
+  }
+  
+  ~range2()
+  {
+    assert (invariant());
+    ++objects_destroyed;
+  }
+};
+
+struct range2_representation : range2_members
+{
+  range2_representation() AK_TOOLKIT_NOEXCEPT : range2_members{0, -1} {};
+};
+  
+
+namespace ak_toolkit { namespace markable_ns {
+  template<> struct representation_of<range2>
+  {
+    typedef range2_representation type;
+  };
+}}
+
+struct mark_range2 : markable_dual_storage_type<mark_range2, range2>
+{
+  static representation_type marked_value() AK_TOOLKIT_NOEXCEPT { return {}; }
+  static bool is_marked_value(const representation_type& v) { return v.min_ > v.max_; }
+};
+
+template <typename T, typename MP>
 void test_mark_dual_storage()
 {
   reset_globals();
   {
-    typedef markable<mark_range> opt_range;
-    const range t0(0, 0), tM(0, 10);
+    typedef markable<MP> opt_range;
+    const T t0(0, 0), tM(0, 10);
     opt_range ot_, ot0 (t0), otM(tM);
     assert (!ot_.has_value());
     assert ( ot0.has_value());
@@ -366,6 +433,8 @@ void test_mark_dual_storage()
   assert(objects_created == objects_destroyed);
 }
 
+void test_mark_dual_storage_1() { test_mark_dual_storage<range, mark_range>(); }
+void test_mark_dual_storage_2() { test_mark_dual_storage<range2, mark_range2>(); }
 
 
 /*
@@ -524,7 +593,8 @@ int main()
   test_optional_as_storage();
 #endif
   
-  test_mark_dual_storage();
+  test_mark_dual_storage_1();
+  test_mark_dual_storage_2();
 /*  test_dual_storage_with_tuple_default_and_move_ctor();
   test_dual_storage_with_tuple_copy_ctor();
   test_dual_storage_with_tuple_init_state_mutation();

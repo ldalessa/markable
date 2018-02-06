@@ -182,6 +182,12 @@ struct check_safe_dual_storage_exception_safety<MVP, typename MVP::is_safe_dual_
 
 } // namespace detail_
 
+template <typename T>
+struct representation_of
+{ 
+  static_assert(sizeof(T) == 0, "class template representation_of<T> needs to be specialized for your type");
+};
+
 template <typename MP>
 struct dual_storage
 {
@@ -325,18 +331,18 @@ public:
   }
 };
 
-template <typename MPT, typename T, typename DUAL_T>
+template <typename MPT, typename T, typename REP_T = typename representation_of<T>::type>
 struct markable_dual_storage_type_unsafe
 {
-  static_assert(sizeof(T) == sizeof(DUAL_T), "dual storage for T has to have the same size and alignment as T");
+  static_assert(sizeof(T) == sizeof(REP_T), "representation of T has to have the same size and alignment as T");
   static_assert(std::is_standard_layout<T>::value, "T must be a Standard Layout type");
-  static_assert(std::is_standard_layout<DUAL_T>::value, "dual storage for T must be a Standard Layout type");
+  static_assert(std::is_standard_layout<REP_T>::value, "representation of T must be a Standard Layout type");
 #ifndef AK_TOOLBOX_NO_ARVANCED_CXX11
-  static_assert(alignof(T) == alignof(DUAL_T), "dual storage for T has to have the same alignment as T");
+  static_assert(alignof(T) == alignof(REP_T), "representation of T has to have the same alignment as T");
 #endif // AK_TOOLBOX_NO_ARVANCED_CXX11
 
   typedef T value_type;
-  typedef DUAL_T representation_type;
+  typedef REP_T representation_type;
   typedef const T& reference_type;
   typedef dual_storage<MPT> storage_type;
   
@@ -350,8 +356,8 @@ struct markable_dual_storage_type_unsafe
   { return storage_type(std::move(v)); } 
 };
 
-template <typename MPT, typename T, typename DUAL_T>
-struct markable_dual_storage_type : markable_dual_storage_type_unsafe<MPT, T, DUAL_T>
+template <typename MPT, typename T, typename REP_T = typename representation_of<T>::type>
+struct markable_dual_storage_type : markable_dual_storage_type_unsafe<MPT, T, REP_T>
 {
   typedef void is_safe_dual_storage_mark_policy; 
 };
@@ -360,7 +366,7 @@ template <typename MP>
 class markable
 {
   static_assert (detail_::check_safe_dual_storage_exception_safety<MP>::value,
-                 "while building a markable type: dual storage for T must not throw exceptions from move constructor or when creating the marked value");
+                 "while building a markable type: representation of T must not throw exceptions from move constructor or when creating the marked value");
 public:
   typedef typename MP::value_type value_type;
   typedef typename MP::storage_type storage_type;
@@ -406,7 +412,6 @@ using markable_ns::mark_value_init;
 using markable_ns::mark_optional;
 using markable_ns::mark_stl_empty;
 using markable_ns::mark_enum;
-using markable_ns::dual_storage;
 
 } // namespace ak_toolkit
 

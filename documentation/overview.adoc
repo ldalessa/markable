@@ -276,6 +276,33 @@ The second is the logical value type, and the third is itd "raw" layout-compatib
 
 WARNING: However, there is a certain danger involved when using dual storage. Types `T` and `DualT` passed to `markable_dual_storage_type` need to preserve certain relation: they have to be layout-compatible. There is no way to enforce it statically in C++, so you have to make sure this is the case. Otherwise you are risking UB.
 
+To guarantee that two Standard Layout types are layout-compatible is difficult, especially if at some point you have to add a member datat to `T`. It requires that the members of two types decompose to similar basic types with the same layout. In order to minimize the risk of the types becoming non layout compatible, we recommend te following technique. Define the `struct` only for storing members. Than have both `T` and its representation counterpart inferit from te member-storing struct. The inheriting types should not define any members:
+
+```c++
+struct range_members
+{
+  int min_, max_;
+};
+
+class range : private range_members
+{
+  bool invariant() const { return min_ <= max_; }
+  
+public:
+  range(int min, int max) : range_members{min, max} { assert (invariant()); } 
+  int min() const { assert (invariant()); return min_; }
+  int max() const { assert (invariant()); return max_; }
+  ~range() { assert (invariant()); }
+};
+
+struct range_representation : range_members
+{
+  range_representation() noexcept : range_members{0, -1} {};
+};
+```
+
+This way there is only one place that defines members for both types.
+
 Using `markable_dual_storage_type` requires that the dual storage has a `noexcept` move constructor and that the marked-value policy function `marked_value()` is also `noexcept`. This requirement is necessary to guarantee exceptions safety for `markable` object. If this requirement is not met the attempt to instantiate a markable object will result in a compile-time error.
 
 If either of the functions is not `noexcept` in your case but you still want to use the policy and take the risk that neither of the two functions will ever throw, you can use class template `markable_dual_storage_type_unsafe` instead. This type does not enforce `noexcept` statically, but will call `std::terminate` should any of the two functions throw when performing operations on `markable` in critical places.

@@ -55,6 +55,9 @@ namespace ak_toolkit
     
     template <typename Enum, std::underlying_type_t<Enum> Val> 
       struct mark_enum;
+      
+    template <typename T>
+      struct representation_of;
   }
 
   using markable_ns::markable;
@@ -68,7 +71,6 @@ namespace ak_toolkit
   using markable_ns::mark_optional;
   using markable_ns::mark_stl_empty;
   using markable_ns::mark_enum;
-  using markable_ns::dual_storage;
 }
 ```
 
