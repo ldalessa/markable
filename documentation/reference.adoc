@@ -276,23 +276,169 @@ struct dual_storage
   typedef typename MP::value_type value_type;
   typedef typename MP::representation_type representation_type;
   typedef typename MP::reference_type reference_type;
-
-  value_type&        as_value_type();
-  const value_type&  as_value_type() const;
-  representation_type&       representation();
-  const representation_type& representation() const;
   
-  constexpr dual_storage(representation_type&& mv) noexcept(noexcept(representation_type(std::move(mv)))));
-  constexpr explicit dual_storage(const value_type& v) noexcept(noexcept(value_type(v))));
-  constexpr explicit dual_storage(value_type&& v) noexcept(noexcept(value_type(std::move(v))));
-  dual_storage(const dual_storage& rhs); // TODO: add noexcept
-  dual_storage(dual_storage&& rhs); // TODO: add noexcept    
+  bool has_value() const noexcept;
+  value_type&        as_value();
+  const value_type&  as_value() const;
+  representation_type&       representation()       noexcept;
+  const representation_type& representation() const noexcept;
+  
+  constexpr explicit dual_storage(representation_type&& mv) noexcept(/*see below*/);
+  constexpr explicit dual_storage(const value_type& v);
+  constexpr explicit dual_storage(value_type&& v) noexcept(/*see below*/);
+  dual_storage(const dual_storage& rhs);
+  dual_storage(dual_storage&& rhs) noexcept(/*see below*/);    
   void operator=(const dual_storage& rhs);    
-  void operator=(dual_storage&& rhs); // TODO: add noexcept  
-  friend void swap(dual_storage& lhs, dual_storage& rhs);  // TODO: add conditional noexcept
+  void operator=(dual_storage&& rhs) noexcept(/*see below*/); 
+  friend void swap(dual_storage& lhs, dual_storage& rhs) noexcept(/*see below*/);
   ~dual_storage();
 };
 ```
+
+An object of class `dual_storage` contains a union of two members of types `value_type` and `representation_type`.
+Such object is said to _have value_ if its active member is of type `value_type`.
+Types `value_type` and `representation_type` shall be layout-compatible.
+
+For an object of class `dual_storage` that does not have a value, to _change to value with expression_ `v` means the following sequence of instructions:
+
+1. An active member of type `representation_type` is destroyed.
+2. A member of type `value_type` is activated by the non-brace initialization with expression `v`.
+
+If this initialization exits via an exception `e`, an attempt is made to activate the member of type `representation_type` through non-brace initialization with expression `MP::marked_value()`. If the latter initialization exits via an exception, `std::teriminate()` is called, otherwise the exception `e` is rethrown.
+
+For an object of type `dual_storage` that has a value, to _clear the value_ means the following sequence of instructions:
+
+1. An active member of type `value_type` is destroyed.
+2. A member of type `representation_type` is activated through non-brace initialization with expression `MP::marked_value()`. If the latter initialization exits via an exception `e`, `std::teriminate()` is called, otherwise the exception `e` is rethrown.
+
+#### `bool has_value() const noexcept;`
+*Returns:* `!MP::is_marked_value(representation())`.
+
+*Remarks:* This tests if the object has value.
+
+
+#### `value_type&        as_value();`
+#### `const value_type&  as_value() const;`
+*Preconditions:* `has_value() == true`.
+
+*Returns:* a reference to the active union member of type `value_type`.
+
+#### `representation_type&       representation()       noexcept;`
+#### `const representation_type& representation() const noexcept;`
+
+*Effects:* if `has_value() == false` returns a reference to the active union member of type `representation_type`;
+otherwise accesses the inactive union member `representation_type` and throug common initial sequence accesses the value of active member `value_type` and returns thus obtained reference.
+
+
+#### `constexpr explicit dual_storage(representation_type&& mv) noexcept(/\*see below*/);`
+
+*Effects:* Direct-non-list-initializes the union member of type `representation_type` with expression `std::move(mv)`.
+
+*Postcondition:* `has_value() == !MP::is_marked_value(mv)`. 
+
+*Remarks:* The expression inside `noexcept` is equivalent to `std::is_nothrow_move_constructible_v<representation_type>`.
+
+
+#### `constexpr explicit dual_storage(const value_type& v);`
+
+*Effects:* Direct-non-list-initializes the union member of type `value_type` with expression `v`.
+
+*Postcondition:* `has_value() == !MP::is_marked_value(representation())`. 
+
+
+#### `constexpr explicit dual_storage(value_type&& v) noexcept(/\*see below*/);`
+
+*Effects:* Direct-non-list-initializes the union member of type `value_type` with expression `std::move(v)`.
+
+*Postcondition:* `has_value() == !MP::is_marked_value(representation())`. 
+
+*Remarks:* The expression inside `noexcept` is equivalent to `std::is_nothrow_move_constructible_v<value_type>`.
+
+
+#### `dual_storage(const dual_storage& rhs);`
+
+*Requires:* `std::is_copy_constructible_v<value_type>` is `true` and `std::is_copy_constructible_v<representation_type>` is `true`.
+
+*Effects:* If `rhs` has a value, activates the union member of type `value_type` as if direct-non-list-initializing an object
+of type `value_type` with the expression `rhs.as_value()`; otherwise activates the union member of type `representation_type` as if direct-non-list-initializing an object of type `representation_type` with the expression `MP::mared_value()`.
+
+*Postcondition:* `rhs.has_value() == this->has_value()`.
+
+*Throws:* Any exception thrown during the initialization of the union member.
+
+
+#### `dual_storage( dual_storage&& rhs) noexcept(/\*see below*/);`
+
+*Requires:* `std::is_copy_constructible_v<value_type>` is `true` and `std::is_copy_constructible_v<representation_type>` is `true`.
+
+*Effects:* If `rhs` has a value, activates the union member of type `value_type` as if direct-non-list-initializing an object
+of type `value_type` with the expression `std::move(rhs.as_value())`; otherwise activates the union member of type `representation_type` as if direct-non-list-initializing an object of type `representation_type` with the expression `MP::mared_value()`.
+
+*Postcondition:* `rhs.has_value() == this->has_value()`.
+
+*Throws:* Any exception thrown during the initialization of the union member.
+
+*Remarks:* The expression inside `noexcept` is equivalent to `std::is_nothrow_move_constructible_v<value_type> && std::is_nothrow_move_constructible_v<representation_type>`.
+
+#### `friend void swap(dual_storage& lhs, dual_storage& rhs) noexcept(/\*see below*/);`
+
+*Effects:*
+|===
+|  |  `lhs.has_value()` | `!lhs.has_value()`
+
+| `rhs.has_value()`
+| calls `swap(lhs.as_value(), rhs.as_value())` (ADL also searches in `std`)
+| `lhs` changes value to `std::move(rhs.as_value())`; the value of `rhs` is cleared; if an exception is thrown the values of `lhs` and `rhs` remain unchanged
+
+| `!rhs.has_value()`
+| `rhs` changes value to `std::move(lhs.as_value())`; the value of `lhs` is cleared; if an exception is thrown the values of `lhs` and `rhs` remain unchanged
+| no effect
+|===
+
+*Throws:* Whatever is thrown by operations `swap(lhs.as_value(), rhs.as_value())` (where ADL also searches in `std`) and `value_type(std::move(rhs.as_value()))`.
+
+*Remarks:* The expression inside `noexcept` is equivalent to `std::is_nothrow_swappable_v<value_type> && std::is_nothrow_move_constructible_v<value_type>`.
+
+
+#### `void operator=(dual_storage&& rhs) noexcept(/\*see below*/);`
+
+*Effects:*
+|===
+|  |  `has_value()` | `!has_value()`
+
+| `rhs.has_value()`
+| calls `as_value() = std::move(rhs.as_value())` 
+| `*this` changes value to `std::move(rhs.as_value())`
+
+| `!rhs.has_value()`
+| the value of `*this` is cleared
+| no effect
+|===
+
+*Throws:* Whatever is thrown by operations `lhs.as_value() = std::move(rhs.as_value())` and `value_type(std::move(rhs.as_value()))`.
+
+*Remarks:* The expression inside `noexcept` is equivalent to `std::is_nothrow_move_assignable_v<value_type> && std::is_nothrow_move_constructible_v<value_type>`.
+
+
+#### `void operator=(const dual_storage&& rhs);`
+
+*Effects:*
+|===
+|  |  `has_value()` | `!has_value()`
+
+| `rhs.has_value()`
+| calls `as_value() = rhs.as_value()` 
+| `*this` changes value to `rhs.as_value()`
+
+| `!rhs.has_value()`
+| the value of `*this` is cleared
+| no effect
+|===
+
+*Throws:* Whatever is thrown by operations `lhs.as_value() = rhs.as_value()` and `value_type(rhs.as_value())`.
+
+#### `~dual_storage();`
+*Effects:* if `has_value() == true`, destroys the active member of type `value_type`, otherwise destroys the active member of `representation_type`.
 
 
 ## Predefined mark policies

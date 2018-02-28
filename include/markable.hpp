@@ -229,20 +229,22 @@ private:
   void construct_storage() { ::new (address()) representation_type(MP::marked_value()); } 
   void construct_storage_checked() AK_TOOLKIT_NOEXCEPT { construct_storage(); }  // std::terminate() if MP::marked_value() throws
   
-  void destroy_value() AK_TOOLKIT_NOEXCEPT { as_value_type().value_type::~value_type(); }
+  void destroy_value() AK_TOOLKIT_NOEXCEPT { as_value().value_type::~value_type(); }
   void destroy_storage() AK_TOOLKIT_NOEXCEPT { representation().representation_type::~representation_type(); }
-  void change_to_storage() AK_TOOLKIT_NOEXCEPT { destroy_value(); construct_storage(); } // std::terminate() if MP::marked_value() throws
-  bool has_value() const { return !MP::is_marked_value(representation()); }
+
+public:
+  void clear_value() AK_TOOLKIT_NOEXCEPT { destroy_value(); construct_storage(); } // std::terminate() if MP::marked_value() throws
+  bool has_value() const AK_TOOLKIT_NOEXCEPT { return !MP::is_marked_value(representation()); }
+  
+  value_type& as_value() { return value_._value; }
+  const value_type& as_value() const { return value_._value; }
   
 public:
-  value_type& as_value_type() { return value_._value; }
-  const value_type& as_value_type() const { return value_._value; }
+
+  representation_type& representation() AK_TOOLKIT_NOEXCEPT { return value_._marking; }
+  const representation_type& representation() const AK_TOOLKIT_NOEXCEPT { return value_._marking; }
   
-public:
-  representation_type& representation() { return value_._marking; }
-  const representation_type& representation() const { return value_._marking; }
-  
-  constexpr dual_storage(representation_type&& mv) AK_TOOLKIT_NOEXCEPT_AS(union_type(std::move(mv)))
+  constexpr explicit dual_storage(representation_type&& mv) AK_TOOLKIT_NOEXCEPT_AS(union_type(std::move(mv)))
     : value_(std::move(mv)) {}
     
   constexpr explicit dual_storage(const value_type& v) AK_TOOLKIT_NOEXCEPT_AS(union_type(v))
@@ -255,7 +257,7 @@ public:
     : value_(detail_::_init_nothing_tag{})
     {
       if (rhs.has_value())
-        construct_value(rhs.as_value_type());
+        construct_value(rhs.as_value());
       else
         construct_storage();
     }
@@ -264,7 +266,7 @@ public:
     : value_(detail_::_init_nothing_tag{})
     {
       if (rhs.has_value())
-        construct_value(std::move(rhs.as_value_type()));
+        construct_value(std::move(rhs.as_value()));
       else
         construct_storage();
     }
@@ -273,15 +275,15 @@ public:
     {
       if (has_value() && rhs.has_value())
       {
-        as_value_type() = rhs.as_value_type();
+        as_value() = rhs.as_value();
       }
       else if (has_value() && !rhs.has_value())
       {
-        change_to_storage();
+        clear_value();
       }
       else if (!has_value() && rhs.has_value())
       {
-        change_to_value(rhs.as_value_type());
+        change_to_value(rhs.as_value());
       }
     }
     
@@ -289,15 +291,15 @@ public:
     {
       if (has_value() && rhs.has_value())
       {
-        as_value_type() = std::move(rhs.as_value_type());
+        as_value() = std::move(rhs.as_value());
       }
       else if (has_value() && !rhs.has_value())
       {
-        change_to_storage();
+        clear_value();
       }
       else if (!has_value() && rhs.has_value())
       {
-        change_to_value(std::move(rhs.as_value_type()));
+        change_to_value(std::move(rhs.as_value()));
       }
     }
     
@@ -306,17 +308,17 @@ public:
     using namespace std;
     if (has_value() && rhs.has_value())
     {
-      swap(as_value_type(), rhs.as_value_type());
+      swap(as_value(), rhs.as_value());
     }
     else if (has_value() && !rhs.has_value())
     {
-      rhs.change_to_value(std::move(as_value_type()));
-      change_to_storage();
+      rhs.change_to_value(std::move(as_value()));
+      clear_value();
     }
     else if (!has_value() && rhs.has_value())
     {
-      change_to_value(std::move(rhs.as_value_type()));
-      rhs.change_to_storage();
+      change_to_value(std::move(rhs.as_value()));
+      rhs.clear_value();
     }
   }
   
@@ -347,7 +349,7 @@ struct markable_dual_storage_type_unsafe
   typedef dual_storage<MPT> storage_type;
   
   static  reference_type access_value(const storage_type& v)
-  { return v.as_value_type(); }
+  { return v.as_value(); }
   static  const representation_type& representation(const storage_type& v)
   { return v.representation(); }
   static  storage_type store_value(const value_type& v)
