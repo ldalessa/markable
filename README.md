@@ -1,6 +1,6 @@
 # markable 1.0.0 [![Build Status](https://travis-ci.org/akrzemi1/markable.svg?branch=master)](https://travis-ci.org/akrzemi1/markable)
 An alternative to `boost::optional<T>` which does not store an additional `bool` flag,
-but encodes the empty state inside `T` using a special indicated value.
+but encodes the 'empty' state inside `T` using a special indicated value.
 
 (This library used to be called `compact_optional`, but it was renamed to avoid confusion with `std::experimental::optional`.)
 
@@ -30,12 +30,12 @@ Can you spare some string values that contain a null character inside, like `std
 
 ```c++
 struct string_marked_value                           // a policy which defines the representaioion of the
-  : ak_toolkit::markable_type<std::string>           // empty std::string value
+  : ak_toolkit::markable_type<std::string>           // 'marked' (special) std::string value
 {               
-  static std::string empty_value() {                 // create the epty value
+  static std::string marked_value() {                // create the marked value
     return std::string("\0\0", 2);
   }
-  static bool is_empty_value(const std::string& v) { // test if a given value is empty
+  static bool is_marked_value(const std::string& v) { // test if a given value is considered marked
     return v.compare(0, v.npos, "\0\0", 2) == 0;
   }
 };
@@ -68,7 +68,7 @@ For additional motivation and overview see this post: https://akrzemi1.wordpress
 
 ## Acknowledgments
 
-The idea of encoding the policy for determining the empty state in a template parameter has been proposed by Vitali Lovich (see https://groups.google.com/a/isocpp.org/d/topic/std-proposals/46J1onhWJ-s/discussion).
+The idea of encoding the policy for determining the marked state in a template parameter has been proposed by Vitali Lovich (see https://groups.google.com/a/isocpp.org/d/topic/std-proposals/46J1onhWJ-s/discussion).
 
 Matt Calabrese and Tomasz Kami&#324;ski suggested the raw-storage representation for holding optional types with strong invariants.
 
