@@ -28,6 +28,7 @@ void test_value_ctor()
   {
     typedef markable< mark_int<int, -1> > opt_int;
     static_assert (sizeof(opt_int) == sizeof(int), "size waste");
+    static_assert (!std::is_convertible<int, opt_int>(), "markable<T> must not be convertible from T");
     
     opt_int oi_, oiN1(-1), oi0(0), oi1(1);
 	assert (oi_.storage_value() == -1);
@@ -42,6 +43,8 @@ void test_value_ctor()
   {
     typedef markable< mark_int<int, 0> > opt_int;
     static_assert (sizeof(opt_int) == sizeof(int), "size waste");
+    static_assert (!std::is_convertible<int, opt_int>(), "markable<T> must not be convertible from T");
+
     opt_int oi_, oiN1(-1), oi0(0), oi1(1);
     assert (!oi_.has_value());
     assert ( oiN1.has_value());

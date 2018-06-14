@@ -381,10 +381,10 @@ public:
   AK_TOOLKIT_CONSTEXPR markable() AK_TOOLKIT_NOEXCEPT_AS(MP::marked_value())
     : _storage(MP::marked_value()) {}
     
-  AK_TOOLKIT_CONSTEXPR markable(const value_type& v)
+  AK_TOOLKIT_CONSTEXPR explicit markable(const value_type& v)
     : _storage(MP::store_value(v)) {}
     
-  AK_TOOLKIT_CONSTEXPR markable(value_type&& v)
+  AK_TOOLKIT_CONSTEXPR explicit markable(value_type&& v)
     : _storage(MP::store_value(std::move(v))) {}
     
   AK_TOOLKIT_CONSTEXPR bool has_value() const {
