@@ -18,3 +18,6 @@ Initial version.
  * Removed the tag parameter to `markable` as it was observed that the same effect can be acheived
    by inheriting from a mark policy rather than using it directly. See the documentation for details.
    
+## Version 1.0.1
+
+ * Made value constructors explicit: we never wanted to convert from `T` to `markable<T>`.
