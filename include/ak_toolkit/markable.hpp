@@ -34,12 +34,14 @@
 # define AK_TOOLKIT_LIKELY(EXPR)  (!!(EXPR))
 #endif
 
-#if defined NDEBUG
-# define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) (EXPR)
-# define AK_TOOLKIT_ASSERT(EXPR) void(0)
-#else
-# define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) ((CHECK) ? (EXPR) : ([]{assert(!#CHECK);}(), (EXPR)))
-# define AK_TOOLKIT_ASSERT(EXPR) ( AK_TOOLKIT_LIKELY(EXPR) ?  void(0) : []{assert(!#EXPR);}() )
+#ifndef AK_TOOLKIT_ASSERT
+# if defined NDEBUG
+#  define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) (EXPR)
+#  define AK_TOOLKIT_ASSERT(EXPR) void(0)
+# else
+#  define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) ((CHECK) ? (EXPR) : ([]{assert(!#CHECK);}(), (EXPR)))
+#  define AK_TOOLKIT_ASSERT(EXPR) ( AK_TOOLKIT_LIKELY(EXPR) ?  void(0) : []{assert(!#EXPR);}() )
+# endif
 #endif
 
 #if defined __cpp_concepts && __cpp_concepts == 201507
