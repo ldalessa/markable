@@ -28,19 +28,27 @@
 #  define AK_TOOLKIT_CONSTEXPR_NOCONST // fix in the future
 #endif
 
-#if defined __GNUC__
-# define AK_TOOLKIT_LIKELY(EXPR)  __builtin_expect(!!(EXPR), 1)
-#else
-# define AK_TOOLKIT_LIKELY(EXPR)  (!!(EXPR))
+#ifndef AK_TOOLKIT_LIKELY
+# if defined __GNUC__
+#  define AK_TOOLKIT_LIKELY(EXPR)  __builtin_expect(!!(EXPR), 1)
+# else
+#  define AK_TOOLKIT_LIKELY(EXPR)  (!!(EXPR))
+# endif
 #endif
 
 #ifndef AK_TOOLKIT_ASSERT
 # if defined NDEBUG
-#  define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) (EXPR)
 #  define AK_TOOLKIT_ASSERT(EXPR) void(0)
 # else
-#  define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) ((CHECK) ? (EXPR) : ([]{assert(!#CHECK);}(), (EXPR)))
 #  define AK_TOOLKIT_ASSERT(EXPR) ( AK_TOOLKIT_LIKELY(EXPR) ?  void(0) : []{assert(!#EXPR);}() )
+# endif
+#endif
+
+#ifndef AK_TOOLKIT_ASSERTED_EXPRESSION
+# if defined NDEBUG
+#  define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) (EXPR)
+# else
+#  define AK_TOOLKIT_ASSERTED_EXPRESSION(CHECK, EXPR) (AK_TOOLKIT_LIKELY(CHECK) ? (EXPR) : ([]{assert(!#CHECK);}(), (EXPR)))
 # endif
 #endif
 
