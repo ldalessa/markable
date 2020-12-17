@@ -9,15 +9,19 @@ Initial version.
  * Removed POD storage mark policy, which relied on `reinterpret_cast`s as it would not guarantee
    the expected results according to C++ rules. We now only have "dual" storage mark policy which
    relies on _common initial sequence_ guarantee in unions.
-   
+
  * For dual policy, no need to derive it from a special tag. Instead, a fourth type was added to
    the policy: `representation_type`. Typically, `representation_type` is same as `storage_type`,
    but when using dual storage the two may be different. The former is the type for which you define
-   the mark value, while the latter is the type used for storage. See documentation for more details.   
+   the mark value, while the latter is the type used for storage. See documentation for more details.
 
  * Removed the tag parameter to `markable` as it was observed that the same effect can be acheived
    by inheriting from a mark policy rather than using it directly. See the documentation for details.
-   
+
 ## Version 1.0.1
 
  * Made value constructors explicit: we never wanted to convert from `T` to `markable<T>`.
+
+## Version 1.0.2
+
+ * Addded concepts support. Enabled when macro `AK_TOOLKIT_WITH_CONCEPTS` is defined prior to the inclusion of the header file.
