@@ -208,9 +208,58 @@ namespace ak_toolkit
 
 *Throws:* Nothing.
 
+#### `void assign(const value_type& v)`
+
+*Effects:* Assigns storage value with expression `MP::store_value(v)`.
+
+*Postconditions:* `has_value() == !MP::is_marked_value(v)`.
+
+*Remarks:*  If an exception is thrown during the call to `storage_type`'s assignment,
+ the state of `storage()`  is determined by the exception safety guarantee of `storage_type`’s
+ assignment.
+
+
+#### `void assign(value_type&& v)`
+
+*Effects:* Assigns storage value with expression `MP::store_value(std::move(v))`.
+
+*Postconditions:* `has_value() == !MP::is_marked_value(v)`.
+
+*Remarks:*  If an exception is thrown during the call to `storage_type`'s assignment,
+ the state of `storage()` is determined by the exception safety guarantee of `storage_type`’s
+ assignment.
+
+
+#### `void assign_storage(const storage_type& v)`
+
+*Effects:* Assigns storage value with expression `v`.
+
+*Postconditions:* `has_value() == !MP::is_marked_value(MP::representation(v))`.
+
+*Remarks:*  If an exception is thrown during the call to `storage_type`'s assignment,
+ the state of `storage()`  is determined by the exception safety guarantee of `storage_type`’s
+ assignment.
+
+
+#### `void assign_storage(storage_type&& v)`
+
+*Effects:* Assigns storage value with expression `std::move(v)`.
+
+*Postconditions:* `has_value() == !MP::is_marked_value(MP::representation(v))`.
+
+*Remarks:*  If an exception is thrown during the call to `storage_type`'s assignment,
+ the state of `storage()` is determined by the exception safety guarantee of `storage_type`’s
+ assignment.
+
+
 ### Exception safety
 
-If an exception is thrown during the assignment, the state of `*this` depends on the exception safety guarantees of `storage_type`. If `storage_type` offers a weak guarantee, the corresponding `markable<>` type also offers only a weak guarantee. In particular, the value of `has_value()` may change.
+If an exception is thrown during the assignment,
+the state of `*this` depends on the exception safety guarantees of the assignment in
+`storage_type`. If `storage_type`'s assignment offers a weak guarantee,
+ the corresponding `markable<>` type also offers only a weak guarantee in assignment.
+ In particular, the value of `has_value()` may change.
+
 
 
 ## Mark policy creation tools
