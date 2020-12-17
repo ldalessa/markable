@@ -475,12 +475,18 @@ public:
     : _storage(MP::store_value(std::move(v))) {}
 
   AK_TOOLKIT_CONSTEXPR bool has_value() const {
-	return !MP::is_marked_value(MP::representation(_storage));
+  	return !MP::is_marked_value(MP::representation(_storage));
   }
 
   AK_TOOLKIT_CONSTEXPR reference_type value() const { return AK_TOOLKIT_ASSERT(has_value()), MP::access_value(_storage); }
 
   AK_TOOLKIT_CONSTEXPR storage_type const& storage_value() const { return _storage; }
+
+  void assign(value_type&& v) { _storage = MP::store_value(std::move(v)); }
+  void assign(const value_type& v) { _storage = MP::store_value(v); }
+
+  void assign_storage(storage_type&& s) { _storage = std::move(s); }
+  void assign_storage(storage_type const& s) { _storage = s; }
 
   friend void swap(markable& lhs, markable& rhs)
   {
