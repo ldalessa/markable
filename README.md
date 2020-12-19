@@ -78,4 +78,4 @@ Distributed under the [Boost Software License, Version 1.0](http://www.boost.org
 
 ***
 
-_&copy; 2015 &mdash; 2018 Andrzej Krzemie&#324;ski_
+_&copy; 2015 &mdash; 2020 Andrzej Krzemie&#324;ski_
