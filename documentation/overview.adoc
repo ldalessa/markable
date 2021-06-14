@@ -314,9 +314,13 @@ struct mark_range : markable_dual_storage_type<mark_range, range, range_represen
 ```
 
 The first argument is the type of the policy we are defining. (We are using the CRTP.)
-The second is the logical value type, and the third is itd "raw" layout-compatible conterpart.
+The second is the logical value type, and the third is its "raw" layout-compatible conterpart.
 
-WARNING: However, there is a certain danger involved when using dual storage. Types `T` and `DualT` passed to `markable_dual_storage_type` need to preserve certain relation: they have to be layout-compatible. There is no way to enforce it statically in C++, so you have to make sure this is the case. Otherwise you are risking UB.
+WARNING: However, there is a certain danger involved when using dual storage.
+Types `T` and `DualT` passed to `markable_dual_storage_type` need to preserve certain relation:
+they have to be layout-compatible. While this can be enforced statically in C++20 with type traits
+`std::is_layout_compatible`, there is no way to enforce it in earlier revisions of C++,
+so you have to make sure this is the case. Otherwise you are risking UB.
 
 To guarantee that two Standard Layout types are layout-compatible is difficult, especially if at some point you have to add a member datat to `T`. It requires that the members of two types decompose to similar basic types with the same layout. In order to minimize the risk of the types becoming non layout compatible, we recommend te following technique. Define the `struct` only for storing members. Than have both `T` and its representation counterpart inferit from te member-storing struct. The inheriting types should not define any members:
 
@@ -362,7 +366,7 @@ using Num   = markable<mark_int<int, -1>>;
 static_assert(std::is_same<Count, Num>::value, "same type");
 ```
 
-In orer to make the two markable types distinct, you can alter the type of the policies (but not their semantics) by inheriting from them:
+In order to make the two markable types distinct, you can alter the type of the policies (but not their semantics) by inheriting from them:
 
 ```c++
 struct mark_count : mark_int<int, -1> {};

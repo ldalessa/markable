@@ -387,6 +387,8 @@ struct markable_dual_storage_type_unsafe
   static_assert(alignof(T) == alignof(REP_T), "representation of T has to have the same alignment as T");
 #endif // AK_TOOLBOX_NO_ARVANCED_CXX11
 
+  // TODO: in C++20: static_assert(std::is_layout_compatible_v<T, REP_T>, "representation of T has to be layout-compatible with T");
+
   typedef T value_type;
   typedef REP_T representation_type;
   typedef const T& reference_type;
@@ -405,12 +407,17 @@ struct markable_dual_storage_type_unsafe
 template <typename MPT, typename T, typename REP_T = typename representation_of<T>::type>
 struct markable_dual_storage_type : markable_dual_storage_type_unsafe<MPT, T, REP_T>
 {
+  // The presence of this typedef is a request to check if T is nothrow move constructible
   typedef void is_safe_dual_storage_mark_policy;
 };
 
 template <AK_TOOLKIT_MARK_POLICY MP>
 class markable
 {
+  // The following assert is only in case a safe dual storage is used.
+  // It then checks if the value_type is nothrow move constructible.
+  // I cannot check it inside the dual storage, because I need a complete
+  // type to determine nothrow traits.
   static_assert (detail_::check_safe_dual_storage_exception_safety<MP>::value,
                  "while building a markable type: representation of T must not throw exceptions from move constructor or when creating the marked value");
 public:
