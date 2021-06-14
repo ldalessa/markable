@@ -1,4 +1,4 @@
-// Copyright (C) 2015 - 2018, Andrzej Krzemienski.
+// Copyright (C) 2015 - 2021, Andrzej Krzemienski.
 //
 // Use, modification, and distribution is subject to the Boost Software
 // License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
@@ -312,6 +312,8 @@ public:
     ++objects_created;
   }
 
+  range& operator=(range const&) = default;
+
   int min() const
   {
     assert (invariant());
@@ -369,6 +371,8 @@ public:
     assert (rhs.invariant());
     ++objects_created;
   }
+
+  range2& operator=(range2 const&) = default;
 
   int min() const
   {
